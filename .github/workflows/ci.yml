@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install ruff
+
+    - name: Lint with ruff
+      run: |
+        echo "Running ruff linting checks..."
+        python -m ruff check .
+        echo "Checking code formatting..."
+        python -m ruff format --check .
+
+    - name: Run tests with coverage
+      run: |
+        echo "Running test suite with coverage..."
+        python -m pytest --cov=src --cov-report=xml --cov-report=term-missing -v
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: skyknit-coverage
+        fail_ci_if_error: false
+
+    - name: Check coverage threshold
+      run: |
+        echo "Checking coverage meets minimum threshold (85%)..."
+        python -c "
+        import xml.etree.ElementTree as ET
+        tree = ET.parse('coverage.xml')
+        coverage = float(tree.getroot().attrib['line-rate']) * 100
+        print(f'Coverage: {coverage:.1f}%')
+        if coverage < 85:
+            print('❌ Coverage below 85% threshold')
+            exit(1)
+        else:
+            print('✅ Coverage meets threshold')
+        "
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.12"
+
+    - name: Install security tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit[toml] safety
+
+    - name: Run bandit security scan
+      run: |
+        echo "Running security scan with bandit..."
+        bandit -r src/ -ll
+
+    - name: Check for known vulnerabilities
+      run: |
+        echo "Checking dependencies for known vulnerabilities..."
+        safety check --short-report
+
+  multi-python:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run core tests
+      run: |
+        echo "Testing on Python ${{ matrix.python-version }}..."
+        python -m pytest tests/test_models.py tests/test_end_to_end.py -v

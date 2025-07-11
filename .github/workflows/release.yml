@@ -1,0 +1,143 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  validate-release:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.12"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install ruff
+
+    - name: Run full validation
+      run: |
+        echo "🔍 Running comprehensive validation for release..."
+        
+        echo "1️⃣ Code formatting and linting..."
+        python -m ruff check .
+        python -m ruff format --check .
+        
+        echo "2️⃣ Running full test suite..."
+        python -m pytest --cov=src --cov-report=term-missing --cov-fail-under=85 -v
+        
+        echo "3️⃣ Testing pattern generation..."
+        python -c "
+        from src.workflow.pattern_workflow import PatternWorkflow
+        
+        workflow = PatternWorkflow()
+        print('Testing simple blanket generation...')
+        result = workflow.generate_pattern('I want a simple blanket')
+        assert 'outputs' in result
+        print('✅ Simple blanket generation works')
+        
+        print('Testing cable blanket generation...')
+        result = workflow.generate_pattern('I want a cable blanket')
+        assert 'outputs' in result
+        print('✅ Cable blanket generation works')
+        
+        print('🎉 All pattern generation tests passed!')
+        "
+
+    - name: Generate release artifacts
+      run: |
+        echo "📦 Generating release artifacts..."
+        
+        # Create a simple demo script
+        cat > demo.py << 'EOF'
+        #!/usr/bin/env python3
+        """
+        Skyknit 2.0 Demo Script
+        
+        This script demonstrates the pattern generation capabilities.
+        """
+        
+        from src.workflow.pattern_workflow import PatternWorkflow
+        
+        def main():
+            workflow = PatternWorkflow()
+            
+            print("🧶 Skyknit 2.0 Pattern Generator")
+            print("=" * 40)
+            
+            # Generate a simple pattern
+            print("\n📝 Generating simple blanket pattern...")
+            result = workflow.generate_pattern("I want a simple blanket")
+            
+            # Display summary
+            summary = result["pattern_summary"]
+            print(f"Title: {summary['title']}")
+            print(f"Size: {summary['finished_size']}")
+            print(f"Materials: {summary['materials']['yarn']}")
+            print(f"Cast on: {summary['cast_on_stitches']} stitches")
+            
+            # Save full pattern
+            with open("simple_blanket_pattern.md", "w") as f:
+                f.write(result["outputs"]["markdown"])
+            print("\n💾 Full pattern saved to 'simple_blanket_pattern.md'")
+            
+            print("\n✨ Demo complete!")
+        
+        if __name__ == "__main__":
+            main()
+        EOF
+        
+        chmod +x demo.py
+        echo "✅ Demo script created"
+
+    - name: Upload demo script
+      uses: actions/upload-artifact@v3
+      with:
+        name: skyknit-demo
+        path: demo.py
+
+  documentation-check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Validate documentation
+      run: |
+        echo "📚 Checking documentation completeness..."
+        
+        # Check required files exist
+        required_files=("README.md" "CLAUDE.md" "environment.yml" "requirements.txt")
+        for file in "${required_files[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✅ $file exists"
+          else
+            echo "❌ $file is missing"
+            exit 1
+          fi
+        done
+        
+        # Check README has essential sections
+        if grep -q "## Overview" README.md && grep -q "## Features" README.md && grep -q "## Testing" README.md; then
+          echo "✅ README has essential sections"
+        else
+          echo "❌ README missing essential sections"
+          exit 1
+        fi
+        
+        # Check CLAUDE.md is up to date
+        if grep -q "188/188 tests" CLAUDE.md || grep -q "188 tests" CLAUDE.md; then
+          echo "✅ CLAUDE.md appears up to date"
+        else
+          echo "⚠️  CLAUDE.md may need updating"
+        fi
+        
+        echo "📚 Documentation validation complete!"

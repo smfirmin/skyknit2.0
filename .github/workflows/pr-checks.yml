@@ -1,0 +1,75 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  pr-validation:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch full history for proper diff
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.12"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install ruff
+
+    - name: Check for breaking changes
+      run: |
+        echo "Checking for potential breaking changes..."
+        # Check if any public API files were modified
+        git diff --name-only origin/main...HEAD | grep -E "(src/models/|src/workflow/|src/exceptions.py)" || echo "No core API changes detected"
+
+    - name: Validate test coverage
+      run: |
+        echo "Ensuring tests were added for new code..."
+        python -m pytest --cov=src --cov-report=term-missing --cov-fail-under=85
+
+    - name: Check code complexity
+      run: |
+        echo "Checking code complexity..."
+        pip install radon
+        radon cc src/ --min B
+        radon mi src/ --min B
+
+  documentation-check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Check if CLAUDE.md needs updates
+      run: |
+        echo "Checking if documentation needs updates..."
+        if git diff --name-only origin/main...HEAD | grep -E "(src/|tests/)" > /dev/null; then
+          echo "Code changes detected. Please ensure CLAUDE.md is updated if necessary."
+          echo "Current architecture section:"
+          grep -A 10 "## Architecture Overview" CLAUDE.md || echo "Architecture section not found"
+        else
+          echo "No code changes detected."
+        fi
+
+    - name: Validate README
+      run: |
+        echo "Checking README for basic content..."
+        if [ -f README.md ]; then
+          echo "✅ README.md exists"
+          if grep -q "skyknit" README.md; then
+            echo "✅ README mentions project name"
+          else
+            echo "⚠️  README should mention the project name"
+          fi
+        else
+          echo "❌ README.md is missing"
+          exit 1
+        fi

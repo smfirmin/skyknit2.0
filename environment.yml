@@ -1,0 +1,10 @@
+name: skyknit
+channels:
+  - defaults
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+    - pytest>=7.0.0
+    - pytest-cov>=4.0.0
+    - ruff
