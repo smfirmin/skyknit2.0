@@ -140,7 +140,9 @@ class RequirementsAgent(BaseAgent):
             raise RequirementsParsingError(f"Unsupported project type: {project_type}")
 
         # Validate dimensions are reasonable for project type
-        if project_type == ProjectType.BLANKET and (dimensions.width < 12 or dimensions.length < 12):
+        if project_type == ProjectType.BLANKET and (
+            dimensions.width < 12 or dimensions.length < 12
+        ):
             raise RequirementsParsingError(
                 f'Blanket too small: {dimensions.width}" x {dimensions.length}". '
                 'Minimum blanket size is 12" x 12".'
