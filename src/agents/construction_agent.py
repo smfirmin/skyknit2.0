@@ -32,7 +32,9 @@ class ConstructionAgent(BaseAgent):
             self._validate_construction_inputs(requirements, fabric_spec)
 
             # Plan construction zones (borders, main body, etc.)
-            construction_zones = self._plan_construction_zones(requirements, fabric_spec)
+            construction_zones = self._plan_construction_zones(
+                requirements, fabric_spec
+            )
 
             # Determine construction sequence
             construction_sequence = self._plan_construction_sequence(

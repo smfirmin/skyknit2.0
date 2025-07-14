@@ -11,9 +11,12 @@ from src.agents.fabric_agent import FabricAgent
 from src.agents.requirements_agent import RequirementsAgent
 from src.agents.stitch_agent import StitchAgent
 from src.exceptions import (
+    AgentProcessingError,
+    ConstructionPlanningError,
     DimensionError,
     FabricSpecificationError,
     GaugeError,
+    OutputGenerationError,
     RequirementsParsingError,
     StitchCalculationError,
     ValidationError,
@@ -341,3 +344,88 @@ class TestErrorRecovery:
 
         # The error should include the problematic value
         assert exc_info.value.value == ""
+
+
+class TestExceptionConstructors:
+    """Test exception constructors for proper attribute assignment"""
+
+    def test_requirements_parsing_error_constructor(self):
+        """Test RequirementsParsingError constructor with user_request"""
+        user_request = "make me a scarf"
+        error = RequirementsParsingError("Failed to parse", user_request=user_request)
+
+        assert error.user_request == user_request
+        assert error.agent_type == "requirements"
+        assert str(error) == "Failed to parse"
+
+    def test_fabric_specification_error_constructor(self):
+        """Test FabricSpecificationError constructor with yarn_weight"""
+        yarn_weight = "super chunky"
+        error = FabricSpecificationError("Invalid yarn weight", yarn_weight=yarn_weight)
+
+        assert error.yarn_weight == yarn_weight
+        assert error.agent_type == "fabric"
+        assert str(error) == "Invalid yarn weight"
+
+    def test_construction_planning_error_constructor(self):
+        """Test ConstructionPlanningError constructor with construction_type"""
+        construction_type = "zone_planning"
+        error = ConstructionPlanningError(
+            "Zone planning failed", construction_type=construction_type
+        )
+
+        assert error.construction_type == construction_type
+        assert error.agent_type == "construction"
+        assert str(error) == "Zone planning failed"
+
+    def test_output_generation_error_constructor(self):
+        """Test OutputGenerationError constructor with output_format"""
+        output_format = "pdf"
+        error = OutputGenerationError(
+            "PDF generation failed", output_format=output_format
+        )
+
+        assert error.output_format == output_format
+        assert error.agent_type == "output"
+        assert str(error) == "PDF generation failed"
+
+    def test_agent_processing_error_base_constructor(self):
+        """Test AgentProcessingError base class constructor"""
+        error = AgentProcessingError("Base error", "test_stage")
+
+        assert error.agent_type == "test_stage"
+        assert str(error) == "Base error"
+
+    def test_dimension_error_constructor(self):
+        """Test DimensionError constructor with dimension_type"""
+        dimension_type = "width"
+        error = DimensionError("Invalid width", dimension_type=dimension_type)
+
+        assert error.dimension_type == dimension_type
+        assert str(error) == "Invalid width"
+
+    def test_gauge_error_constructor(self):
+        """Test GaugeError constructor with yarn_weight"""
+        yarn_weight = "worsted"
+        error = GaugeError("Gauge calculation failed", yarn_weight=yarn_weight)
+
+        assert error.yarn_weight == yarn_weight
+        assert str(error) == "Gauge calculation failed"
+
+    def test_stitch_calculation_error_constructor(self):
+        """Test StitchCalculationError constructor with calculation_type"""
+        calculation_type = "cast_on"
+        error = StitchCalculationError(
+            "Cast on calculation failed", calculation_type=calculation_type
+        )
+
+        assert error.calculation_type == calculation_type
+        assert str(error) == "Cast on calculation failed"
+
+    def test_workflow_orchestration_error_constructor(self):
+        """Test WorkflowOrchestrationError constructor with stage"""
+        stage = "validation"
+        error = WorkflowOrchestrationError("Validation stage failed", stage=stage)
+
+        assert error.stage == stage
+        assert str(error) == "Validation stage failed"

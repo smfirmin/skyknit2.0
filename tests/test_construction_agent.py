@@ -2,6 +2,7 @@ import pytest
 
 from src.agents.base_agent import AgentType, Message
 from src.agents.construction_agent import ConstructionAgent
+from src.exceptions import ConstructionPlanningError, ValidationError
 from src.models.knitting_models import (
     ConstructionSpec,
     ConstructionZone,
@@ -309,3 +310,110 @@ class TestConstructionAgent:
         )
         result = self.agent.handle_message(message)
         assert result["status"] == "acknowledged"
+
+    def test_process_invalid_input_validation_error(self):
+        """Test that invalid input raises ValidationError"""
+        with pytest.raises(ValidationError) as exc_info:
+            self.agent.process({"invalid": "data"})
+
+        assert "Invalid input data for construction planning" in str(exc_info.value)
+        assert exc_info.value.field == "requirements or fabric_spec"
+
+    def test_validate_construction_inputs_missing_requirements(self):
+        """Test validation error when requirements is None"""
+        with pytest.raises(ValidationError) as exc_info:
+            self.agent._validate_construction_inputs(None, self.fabric_spec)
+
+        assert "Missing requirements for construction planning" in str(exc_info.value)
+        assert exc_info.value.field == "requirements"
+
+    def test_validate_construction_inputs_missing_fabric_spec(self):
+        """Test validation error when fabric_spec is None"""
+        with pytest.raises(ValidationError) as exc_info:
+            self.agent._validate_construction_inputs(self.requirements, None)
+
+        assert "Missing fabric specification for construction planning" in str(
+            exc_info.value
+        )
+        assert exc_info.value.field == "fabric_spec"
+
+    def test_validate_construction_inputs_missing_dimensions(self):
+        """Test validation error when dimensions is missing"""
+        bad_requirements = RequirementsSpec(
+            project_type=ProjectType.BLANKET,
+            dimensions=None,  # Missing dimensions
+            style_preferences={"texture": "simple"},
+            special_requirements=[],
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            self.agent._validate_construction_inputs(bad_requirements, self.fabric_spec)
+
+        assert "Missing dimensions in requirements" in str(exc_info.value)
+        assert exc_info.value.field == "requirements.dimensions"
+
+    def test_plan_construction_zones_unsupported_project_type(self):
+        """Test error handling for unsupported project types"""
+        # Create a requirements spec with invalid project type
+        from unittest.mock import Mock
+
+        bad_requirements = Mock()
+        bad_requirements.project_type = "INVALID_TYPE"
+
+        with pytest.raises(ConstructionPlanningError) as exc_info:
+            self.agent._plan_construction_zones(bad_requirements, self.fabric_spec)
+
+        assert "Unsupported project type" in str(exc_info.value)
+        assert exc_info.value.construction_type == "project_type_validation"
+
+    def test_plan_construction_zones_missing_stitch_pattern(self):
+        """Test error handling when main stitch pattern is missing"""
+        bad_fabric = FabricSpec(
+            stitch_pattern=None,  # Missing main pattern
+            border_pattern=self.border_pattern,
+            yarn_requirements=self.yarn,
+            gauge={"stitches_per_inch": 4.0, "rows_per_inch": 6.0},
+            construction_notes=["test construction"],
+        )
+
+        with pytest.raises(ConstructionPlanningError) as exc_info:
+            self.agent._plan_construction_zones(self.requirements, bad_fabric)
+
+        assert "Cannot plan construction: missing main stitch pattern" in str(
+            exc_info.value
+        )
+        assert exc_info.value.construction_type == "zone_planning"
+
+    def test_validate_construction_plan_empty_zones(self):
+        """Test validation error when no construction zones are provided"""
+        with pytest.raises(ConstructionPlanningError) as exc_info:
+            self.agent._validate_construction_plan([], ["cast_on"], ["weave_in_ends"])
+
+        assert "No construction zones planned" in str(exc_info.value)
+        assert exc_info.value.construction_type == "plan_validation"
+
+    def test_validate_construction_plan_empty_sequence(self):
+        """Test validation error when no construction sequence is provided"""
+        zones = [self.construction_zone]
+
+        with pytest.raises(ConstructionPlanningError) as exc_info:
+            self.agent._validate_construction_plan(zones, [], ["weave_in_ends"])
+
+        assert "No construction sequence planned" in str(exc_info.value)
+        assert exc_info.value.construction_type == "plan_validation"
+
+    def test_validate_construction_plan_zone_missing_name(self):
+        """Test validation error when construction zone is missing name"""
+        from unittest.mock import Mock
+
+        bad_zone = Mock()
+        bad_zone.name = None
+        bad_zone.stitch_pattern = self.stitch_pattern
+
+        with pytest.raises(ConstructionPlanningError) as exc_info:
+            self.agent._validate_construction_plan(
+                [bad_zone], ["cast_on"], ["weave_in_ends"]
+            )
+
+        assert "Construction zone missing name" in str(exc_info.value)
+        assert exc_info.value.construction_type == "zone_validation"
