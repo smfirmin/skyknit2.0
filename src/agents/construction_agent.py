@@ -1,5 +1,6 @@
 from typing import Any, Dict, List
 
+from ..exceptions import ConstructionPlanningError, ValidationError
 from ..models.knitting_models import (
     ConstructionSpec,
     ConstructionZone,
@@ -14,42 +15,78 @@ class ConstructionAgent(BaseAgent):
 
     def process(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Plan the structural construction of the project"""
-        requirements = input_data.get("requirements")
-        fabric_spec = input_data.get("fabric_spec")
+        try:
+            # Validate input first
+            if not self.validate_input(input_data):
+                raise ValidationError(
+                    "Invalid input data for construction planning",
+                    field="requirements or fabric_spec",
+                    expected="RequirementsSpec and FabricSpec objects",
+                    value=f"requirements={type(input_data.get('requirements'))}, fabric_spec={type(input_data.get('fabric_spec'))}",
+                )
 
-        # Plan construction zones (borders, main body, etc.)
-        construction_zones = self._plan_construction_zones(requirements, fabric_spec)
+            requirements = input_data.get("requirements")
+            fabric_spec = input_data.get("fabric_spec")
 
-        # Determine construction sequence
-        construction_sequence = self._plan_construction_sequence(
-            requirements, construction_zones
-        )
+            # Validate requirements and fabric spec before planning
+            self._validate_construction_inputs(requirements, fabric_spec)
 
-        # Plan finishing requirements
-        finishing_requirements = self._plan_finishing_requirements(
-            requirements, fabric_spec
-        )
+            # Plan construction zones (borders, main body, etc.)
+            construction_zones = self._plan_construction_zones(requirements, fabric_spec)
 
-        # Generate structural notes
-        structural_notes = self._generate_structural_notes(
-            requirements, fabric_spec, construction_zones
-        )
+            # Determine construction sequence
+            construction_sequence = self._plan_construction_sequence(
+                requirements, construction_zones
+            )
 
-        construction_spec = ConstructionSpec(
-            target_dimensions=requirements.dimensions,
-            construction_zones=construction_zones,
-            construction_sequence=construction_sequence,
-            finishing_requirements=finishing_requirements,
-            structural_notes=structural_notes,
-        )
+            # Plan finishing requirements
+            finishing_requirements = self._plan_finishing_requirements(
+                requirements, fabric_spec
+            )
 
-        return {"construction_spec": construction_spec}
+            # Generate structural notes
+            structural_notes = self._generate_structural_notes(
+                requirements, fabric_spec, construction_zones
+            )
+
+            # Validate the construction plan before creating spec
+            self._validate_construction_plan(
+                construction_zones, construction_sequence, finishing_requirements
+            )
+
+            construction_spec = ConstructionSpec(
+                target_dimensions=requirements.dimensions,
+                construction_zones=construction_zones,
+                construction_sequence=construction_sequence,
+                finishing_requirements=finishing_requirements,
+                structural_notes=structural_notes,
+            )
+
+            return {"construction_spec": construction_spec}
+
+        except (ValidationError, ConstructionPlanningError):
+            raise
+        except Exception as e:
+            raise ConstructionPlanningError(
+                f"Unexpected error during construction planning: {str(e)}"
+            ) from e
 
     def validate_input(self, input_data: Dict[str, Any]) -> bool:
+        """Validate input data for construction planning"""
+        if not isinstance(input_data, dict):
+            return False
+
+        if "requirements" not in input_data or "fabric_spec" not in input_data:
+            return False
+
+        requirements = input_data["requirements"]
+        fabric_spec = input_data["fabric_spec"]
+
         return (
-            "requirements" in input_data
-            and "fabric_spec" in input_data
-            and hasattr(input_data["requirements"], "dimensions")
+            hasattr(requirements, "dimensions")
+            and hasattr(requirements, "project_type")
+            and hasattr(fabric_spec, "stitch_pattern")
+            and hasattr(fabric_spec, "border_pattern")
         )
 
     def handle_message(self, message: Message) -> Dict[str, Any]:
@@ -59,30 +96,147 @@ class ConstructionAgent(BaseAgent):
         self, requirements, fabric_spec
     ) -> List[ConstructionZone]:
         """Plan the structural zones of the project"""
-        zones = []
+        try:
+            zones = []
 
-        # For blankets, we typically have border + main body
-        if requirements.project_type == ProjectType.BLANKET:
-            # Border zone
-            if fabric_spec.border_pattern:
-                border_zone = ConstructionZone(
-                    name="border",
-                    stitch_pattern=fabric_spec.border_pattern,
-                    relative_position="perimeter",
-                    priority=1,
+            # For blankets, we typically have border + main body
+            if requirements.project_type == ProjectType.BLANKET:
+                # Validate that we have valid stitch patterns
+                if not fabric_spec.stitch_pattern:
+                    raise ConstructionPlanningError(
+                        "Cannot plan construction: missing main stitch pattern",
+                        construction_type="zone_planning",
+                    )
+
+                # Border zone
+                if fabric_spec.border_pattern:
+                    if not fabric_spec.border_pattern.name:
+                        raise ConstructionPlanningError(
+                            "Invalid border pattern: missing name",
+                            construction_type="border_planning",
+                        )
+
+                    border_zone = ConstructionZone(
+                        name="border",
+                        stitch_pattern=fabric_spec.border_pattern,
+                        relative_position="perimeter",
+                        priority=1,
+                    )
+                    zones.append(border_zone)
+
+                # Main body zone
+                if not fabric_spec.stitch_pattern.name:
+                    raise ConstructionPlanningError(
+                        "Invalid main stitch pattern: missing name",
+                        construction_type="main_pattern_planning",
+                    )
+
+                main_zone = ConstructionZone(
+                    name="main_body",
+                    stitch_pattern=fabric_spec.stitch_pattern,
+                    relative_position="center",
+                    priority=2,
                 )
-                zones.append(border_zone)
+                zones.append(main_zone)
+            else:
+                raise ConstructionPlanningError(
+                    f"Unsupported project type for construction planning: {requirements.project_type}",
+                    construction_type="project_type_validation",
+                )
 
-            # Main body zone
-            main_zone = ConstructionZone(
-                name="main_body",
-                stitch_pattern=fabric_spec.stitch_pattern,
-                relative_position="center",
-                priority=2,
+            if not zones:
+                raise ConstructionPlanningError(
+                    "No construction zones could be planned",
+                    construction_type="zone_planning",
+                )
+
+            return zones
+
+        except ConstructionPlanningError:
+            raise
+        except Exception as e:
+            raise ConstructionPlanningError(
+                f"Failed to plan construction zones: {str(e)}",
+                construction_type="zone_planning",
+            ) from e
+
+    def _validate_construction_inputs(self, requirements, fabric_spec):
+        """Validate requirements and fabric spec for construction planning"""
+        if not requirements:
+            raise ValidationError(
+                "Missing requirements for construction planning",
+                field="requirements",
+                expected="RequirementsSpec object",
+                value=None,
             )
-            zones.append(main_zone)
 
-        return zones
+        if not fabric_spec:
+            raise ValidationError(
+                "Missing fabric specification for construction planning",
+                field="fabric_spec",
+                expected="FabricSpec object",
+                value=None,
+            )
+
+        if not hasattr(requirements, "dimensions") or not requirements.dimensions:
+            raise ValidationError(
+                "Missing dimensions in requirements",
+                field="requirements.dimensions",
+                expected="Dimensions object",
+                value=getattr(requirements, "dimensions", None),
+            )
+
+        if not hasattr(requirements, "project_type"):
+            raise ValidationError(
+                "Missing project type in requirements",
+                field="requirements.project_type",
+                expected="ProjectType enum value",
+                value=getattr(requirements, "project_type", None),
+            )
+
+        if not hasattr(fabric_spec, "stitch_pattern") or not fabric_spec.stitch_pattern:
+            raise ValidationError(
+                "Missing stitch pattern in fabric specification",
+                field="fabric_spec.stitch_pattern",
+                expected="StitchPattern object",
+                value=getattr(fabric_spec, "stitch_pattern", None),
+            )
+
+    def _validate_construction_plan(
+        self, construction_zones, construction_sequence, finishing_requirements
+    ):
+        """Validate the constructed plan before creating spec"""
+        if not construction_zones:
+            raise ConstructionPlanningError(
+                "No construction zones planned",
+                construction_type="plan_validation",
+            )
+
+        if not construction_sequence:
+            raise ConstructionPlanningError(
+                "No construction sequence planned",
+                construction_type="plan_validation",
+            )
+
+        if not finishing_requirements:
+            raise ConstructionPlanningError(
+                "No finishing requirements planned",
+                construction_type="plan_validation",
+            )
+
+        # Validate that zones have required attributes
+        for zone in construction_zones:
+            if not hasattr(zone, "name") or not zone.name:
+                raise ConstructionPlanningError(
+                    "Construction zone missing name",
+                    construction_type="zone_validation",
+                )
+
+            if not hasattr(zone, "stitch_pattern") or not zone.stitch_pattern:
+                raise ConstructionPlanningError(
+                    f"Construction zone '{zone.name}' missing stitch pattern",
+                    construction_type="zone_validation",
+                )
 
     def _plan_construction_sequence(
         self, requirements, construction_zones

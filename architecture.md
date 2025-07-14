@@ -6,11 +6,6 @@ SkyKnit 2.0 is an AI agent system for creating knitting patterns. The initial im
 ## Core Workflow
 
 ```
-User Input → Requirements Agent → Fabric Agent → Stitch Agent → Validation Agent → Output
-```
-
-**Future Extension** (for 3D garments):
-```
 User Input → Requirements Agent → Fabric Agent → Stitch Agent → Construction Agent → Validation Agent → Output
 ```
 
