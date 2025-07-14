@@ -99,7 +99,7 @@ jobs:
         echo "✅ Demo script created"
 
     - name: Upload demo script
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: skyknit-demo
         path: demo.py
