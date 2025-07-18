@@ -11,27 +11,6 @@ An AI agent system that generates complete knitting patterns from natural langua
 
 Skyknit 2.0 transforms user requests like "I want a simple blanket" into complete, validated knitting patterns with multiple output formats. Built with a multi-agent architecture for clear separation of concerns and extensible design.
 
-## Features
-
-- **Natural Language Input**: Simple requests like "cable blanket" or "simple blanket"
-- **Complete Pattern Generation**: Cast-on counts, stitch instructions, materials list, gauge
-- **Mathematical Validation**: Automatic dimension accuracy checking and pattern verification
-- **Multiple Output Formats**: Markdown, plain text, JSON, and summary formats
-- **Yarn Calculation**: Automatic yardage estimation with waste buffer
-
-## Current Capabilities
-
-### Supported Projects
-- **Blankets**: Rectangular patterns with automatic seed stitch borders
-- **Pattern Types**: Stockinette (simple) and cable patterns
-- **Sizes**: Configurable dimensions (default 48" x 60")
-
-### Pattern Features
-- Automatic gauge calculations (worsted weight default)
-- Pattern repeat adjustments for cables
-- Border integration with main pattern
-- Construction notes and finishing instructions
-
 ## Quick Start
 
 ```python
@@ -74,35 +53,8 @@ python3 -m ruff format .
 python3 -m pytest tests/test_end_to_end.py -v
 ```
 
-**Current Status**: 188/188 tests passing, 90% code coverage, comprehensive error handling
-
-## Architecture
-
-Multi-agent system with specialized responsibilities:
-
-1. **Requirements Agent** → Parses user input into structured requirements
-2. **Fabric Agent** → Makes material and construction decisions  
-3. **Construction Agent** → Plans structural approach and construction zones
-4. **Stitch Agent** → Generates mathematical calculations and instructions
-5. **Validation Agent** → Verifies pattern accuracy and provides warnings
-6. **Output Agent** → Calculates yardage and formats final patterns
-
-## Example Output
-
-Input: `"I want a simple blanket"`
-
-Output includes:
-- **Materials**: 8640 yards worsted weight wool yarn, US 8 needles
-- **Gauge**: 4 stitches and 5.5 rows = 1 inch
-- **Instructions**: Cast on 200 stitches, work stockinette with borders
-- **Finished Size**: 50" x 60" (accounting for border width)
-
-## Future Development
-
-- LLM integration for dynamic pattern generation
-- Support for additional project types (scarves, sweaters, hats)
-- Advanced stitch pattern library
-- Construction agents for 3D garments
+## The O.G.
+https://www.aiweirdness.com/skyknit-when-knitters-teamed-up-with-18-04-19/
 
 ## References
 
@@ -110,3 +62,10 @@ Inspired by MIT's computational knitting research:
 - https://www.zdnet.com/article/mit-breaks-new-ground-in-ai-with-knitting-yes-knitting/
 - https://deepknitting.csail.mit.edu/
 - https://knitskel.csail.mit.edu/
+
+
+## Potential Knowledge Base Resources
+
+- https://www.knittingfool.com/StitchIndex/Alpha.aspx
+- http://knittingonthenet.com/stitches.htm
+- https://nimble-needles.com/knitting-stitches-and-patterns/

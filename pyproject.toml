@@ -1,9 +1,38 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "skyknit"
+version = "0.1.0"
+description = "AI agent system for generating knitting patterns"
+authors = [{name = "skyknit-team"}]
+license = {text = "MIT"}
+requires-python = ">=3.8"
+dependencies = [
+    "anthropic",
+    "openai",
+    "requests",
+    "pydantic",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+    "mypy",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["skyknit*"]
+
 [tool.ruff]
 # Same as Black's default line length
 line-length = 88
 
 # Assume Python 3.8+
-target-version = "py38"
+target-version = "py312"
 
 [tool.ruff.lint]
 # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
@@ -62,7 +91,7 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.ruff.lint.isort]
-known-first-party = ["src"]
+known-first-party = ["skyknit"]
 
 [tool.ruff.lint.per-file-ignores]
 # Tests can use assert statements and unused imports

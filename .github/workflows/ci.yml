@@ -35,6 +35,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install ruff
+        pip install -e .
 
     - name: Lint with ruff
       run: |
@@ -116,6 +117,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install -e .
 
     - name: Run core tests
       run: |
