@@ -27,6 +27,16 @@ uv run ruff format --check .           # format check only
 uv run mypy topology/                  # strict mode
 ```
 
+## CI
+
+GitHub Actions runs three parallel jobs on every push and PR to main: **lint** (`ruff check` + `ruff format --check`), **typecheck** (`mypy topology/`), and **test** (`pytest -v`). All three must pass before merging.
+
+## Dependencies
+
+- Only runtime dependency: PyYAML
+- `uv.lock` is committed for reproducible builds — re-run `uv sync` after pulling
+- Add runtime deps: `uv add <pkg>` | Add dev deps: `uv add --dev <pkg>`
+
 ## Architecture
 
 - **topology/** — Core package: edge/join type registry backed by YAML lookup tables
@@ -47,6 +57,22 @@ See `ARCHITECTURE.md` for full system design and module build order.
 - **Ruff** — line length 100, target py314, rules: E, W, F, I (E501 ignored)
 - PascalCase classes, UPPER_CASE enums, snake_case methods, `_prefix` for private
 - Docstrings on public classes/methods; inline comments only for non-obvious logic
+
+## Test Conventions
+
+- Module-scoped `registry` fixture — registry loads once per test module for efficiency
+- Parametrized tests for edge/join compatibility combinations
+- `tmp_path` fixture for testing corrupted or missing YAML (isolated data directories)
+- Mutation-proof assertions: verify returned dicts are copies, not mutable views
+- Negative tests for known-invalid combinations and missing keys
+
+## Adding New Data
+
+1. Define or extend enum in `topology/types.py`
+2. Add entries to the relevant YAML files in `topology/data/`
+3. Import the module — cross-reference validation runs at startup and will raise if any enum value is missing from required tables
+4. CONDITIONAL compatibility entries must include a `condition_fn` field
+5. YAML files carry a `version` field — bump when changing table schema
 
 ## Design Invariants
 
