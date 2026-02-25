@@ -1,0 +1,102 @@
+version: "1.0"
+
+# Join types connect exactly two edges (one from each component).
+# A Join is a first-class object, not a property of a component.
+# Each join owns specific parameters; adjacent Stitch Fillers treat these
+# as read-only — they account for join-owned stitches but do not generate them.
+#
+# construction_methods tags are drawn from the garment construction taxonomy:
+#   raglan_seamless, circular_yoke, set_in_sleeve, saddle_shoulder,
+#   drop_shoulder, seamed_raglan — used by the Planner to validate that a
+#   proposed join is consistent with the chosen construction method.
+
+join_types:
+
+  - id: CONTINUATION
+    description: >
+      Working yarn continues seamlessly from one component into the next.
+      No yarn break, no cast-on, no pickup. The Hamiltonian path continues
+      uninterrupted across the boundary.
+    symmetric: false
+    directional: true
+    owns_parameters: []
+    construction_methods:
+      - raglan_seamless
+      - circular_yoke
+      - saddle_shoulder
+      - drop_shoulder
+    notes: >
+      Requires LIVE_STITCH on both sides. The canonical top-down seamless join.
+      No join-owned parameters; stitch count carries over ONE_TO_ONE.
+
+  - id: HELD_STITCH
+    description: >
+      Live stitches are placed on a stitch holder or waste yarn and returned
+      to the needle later in construction. The held stitches re-enter as
+      LIVE_STITCH when the second component is worked.
+    symmetric: false
+    directional: true
+    owns_parameters: []
+    construction_methods:
+      - raglan_seamless
+      - circular_yoke
+      - saddle_shoulder
+    notes: >
+      Used for underarm separation in top-down construction: sleeve stitches
+      are held while the body continues, then resumed for the sleeve.
+      Stitch count is preserved ONE_TO_ONE on the holder.
+
+  - id: CAST_ON_JOIN
+    description: >
+      New stitches are cast on at the boundary. Owns the cast-on count and
+      method. Used where construction requires introducing fresh stitches
+      at a join point, e.g. underarm stitches in a top-down yoke.
+    symmetric: false
+    directional: true
+    owns_parameters:
+      - cast_on_count
+      - cast_on_method
+    construction_methods:
+      - raglan_seamless
+      - circular_yoke
+      - drop_shoulder
+    notes: >
+      Source side has LIVE_STITCH; destination side is CAST_ON.
+      Arithmetic implication: ADDITIVE — cast_on_count new stitches enter
+      the live stitch count. The Planner owns cast_on_count; Stitch Fillers
+      account for it but do not set it.
+
+  - id: PICKUP
+    description: >
+      Stitches are picked up from a finished (bound-off or selvedge) edge
+      to begin a new component or band. Owns the pickup ratio and direction.
+    symmetric: false
+    directional: true
+    owns_parameters:
+      - pickup_ratio
+      - pickup_direction
+    construction_methods:
+      - all
+    notes: >
+      Used for neckbands, button bands, and sleeve pickup in bottom-up
+      construction. The pickup ratio governs how many stitches are created
+      per unit of source edge length. Arithmetic implication: RATIO.
+
+  - id: SEAM
+    description: >
+      Two finished edges are joined post-construction, typically by sewing
+      (mattress stitch) or three-needle bind-off. Symmetric: key ordering
+      is arbitrary for standard seams.
+    symmetric: true
+    directional: false
+    owns_parameters:
+      - seam_method
+    construction_methods:
+      - set_in_sleeve
+      - seamed_raglan
+      - saddle_shoulder_seamed
+    notes: >
+      Standard case: (BOUND_OFF, BOUND_OFF). Three-needle bind-off variant
+      is (LIVE_STITCH, LIVE_STITCH) and is CONDITIONAL in the compatibility
+      table (condition: three_needle_compatible). Arithmetic implication:
+      STRUCTURAL — two stitch sets are consumed into the seam.

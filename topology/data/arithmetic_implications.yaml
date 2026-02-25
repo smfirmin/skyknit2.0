@@ -1,0 +1,46 @@
+version: "1.0"
+
+# Arithmetic implications for each join type.
+# Used by the Algebraic Checker to track live stitch counts as it simulates
+# the component IR execution sequence.
+#
+#   ONE_TO_ONE  — stitch count carries across unchanged
+#   ADDITIVE    — new stitches are introduced; count increases by cast_on_count
+#   RATIO       — count is derived from source edge length × pickup_ratio
+#   STRUCTURAL  — two stitch sets are consumed and joined; net live count decreases
+
+entries:
+
+  - join_type: CONTINUATION
+    implication: ONE_TO_ONE
+    notes: >
+      Stitch count carries over exactly from source to destination.
+      No stitches are added, removed, or consumed.
+
+  - join_type: HELD_STITCH
+    implication: ONE_TO_ONE
+    notes: >
+      Stitches move to holder; count is preserved. The Algebraic Checker
+      tracks held stitches separately from the active needle state and
+      reintegrates them when the held component is resumed.
+
+  - join_type: CAST_ON_JOIN
+    implication: ADDITIVE
+    notes: >
+      cast_on_count new stitches enter the active stitch count at this join.
+      The Planner owns cast_on_count; the Algebraic Checker reads it from
+      the Join object.
+
+  - join_type: PICKUP
+    implication: RATIO
+    notes: >
+      Resulting stitch count = floor(source_edge_length_in_rows × pickup_ratio).
+      The Algebraic Checker derives the count from the source edge's row count
+      and the pickup_ratio owned by this join.
+
+  - join_type: SEAM
+    implication: STRUCTURAL
+    notes: >
+      Two stitch sets are consumed and bound together. The net live stitch
+      count on the active needle decreases by the seamed stitch count.
+      For three-needle bind-off, both sides are consumed simultaneously.

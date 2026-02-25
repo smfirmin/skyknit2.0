@@ -1,0 +1,67 @@
+version: "1.0"
+
+# Edge types are the physical boundaries of a component shape.
+# Each component has a named set of typed edges — the boundaries the Planner
+# populates and the Stitch Fillers must arrive at correctly.
+#
+# OPEN edges are terminal (cuff, hem, neckline) and carry no join slot.
+
+edge_types:
+
+  - id: CAST_ON
+    description: >
+      Starting edge where stitches are created. The component begins here.
+      Stitches exist but have not yet been worked.
+    has_live_stitches: false
+    is_terminal: false
+    phase_constraint: start
+    notes: >
+      The cast-on row itself. In a top-down sweater the yoke typically begins
+      with a CAST_ON edge at the collar.
+
+  - id: LIVE_STITCH
+    description: >
+      Active stitches currently on the needle, ready to be transferred,
+      held, or continued into the next component.
+    has_live_stitches: true
+    is_terminal: false
+    phase_constraint: any
+    notes: >
+      The primary boundary type for seamless and held-stitch joins.
+      This is the Hamiltonian frontier of the knitting graph — the active
+      working boundary at any point in construction.
+
+  - id: BOUND_OFF
+    description: >
+      Finished edge; all stitches have been bound off. No live stitches remain.
+    has_live_stitches: false
+    is_terminal: false
+    phase_constraint: end
+    notes: >
+      Used as the source side of PICKUP joins and both sides of SEAM joins.
+      Typical in set-in sleeve construction and bottom-up shoulder seams.
+
+  - id: PICKUP
+    description: >
+      Selvedge or row-end edge from which stitches can be picked up.
+      This is a lateral boundary of a component, running along knitted rows
+      rather than across them.
+    has_live_stitches: false
+    is_terminal: false
+    phase_constraint: any
+    notes: >
+      Lateral boundary of a component. Stitches are created from the existing
+      fabric structure. Common for button bands (front selvedge) and sleeve
+      pickup in bottom-up construction.
+
+  - id: OPEN
+    description: >
+      Terminal edge with no join. Represents a deliberate open boundary:
+      cuff, hem, neckline, or any edge that is left unjoined.
+    has_live_stitches: true
+    is_terminal: true
+    phase_constraint: end
+    notes: >
+      Has no join slot. May have live stitches (e.g. a cuff worked in the
+      round and left on the needle) or not (a hemmed edge). The Planner
+      marks terminal edges OPEN; the Writer renders them as pattern endings.

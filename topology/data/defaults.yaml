@@ -1,0 +1,44 @@
+version: "1.0"
+
+# Default values for join-owned parameters.
+# Keyed by (edge_type_a, edge_type_b, join_type) — same ordering as the
+# compatibility table. The Planner may override any default; these are
+# starting values only.
+#
+# cast_on_count is intentionally null: it has no safe default and must
+# always be set by the Planner from the shape manifest.
+
+entries:
+
+  - edge_type_a: LIVE_STITCH
+    edge_type_b: CAST_ON
+    join_type: CAST_ON_JOIN
+    defaults:
+      cast_on_method: backward_loop   # simple, no-tool cast-on; suitable for underarm gaps
+      cast_on_count: null             # required; set by Planner from physical dimensions
+
+  - edge_type_a: BOUND_OFF
+    edge_type_b: LIVE_STITCH
+    join_type: PICKUP
+    defaults:
+      pickup_ratio: "3:4"            # 3 sts per 4 rows; standard for stockinette at most gauges
+      pickup_direction: right_to_left
+
+  - edge_type_a: PICKUP
+    edge_type_b: LIVE_STITCH
+    join_type: PICKUP
+    defaults:
+      pickup_ratio: "2:3"            # 2 sts per 3 rows; standard for side selvedge pickup
+      pickup_direction: right_to_left
+
+  - edge_type_a: BOUND_OFF
+    edge_type_b: BOUND_OFF
+    join_type: SEAM
+    defaults:
+      seam_method: mattress_stitch   # invisible seam for stockinette side seams
+
+  - edge_type_a: LIVE_STITCH
+    edge_type_b: LIVE_STITCH
+    join_type: SEAM
+    defaults:
+      seam_method: three_needle_bind_off
