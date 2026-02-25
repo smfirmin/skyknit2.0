@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Python 3.11+
+- Python 3.14+
 - [uv](https://docs.astral.sh/uv/) — fast Python package and project manager
 
 Install uv if you don't have it:
@@ -23,7 +23,7 @@ cd skyknit2.0
 uv sync --extra dev
 ```
 
-`uv sync` reads `pyproject.toml`, creates a `.venv` in the project root, and installs all runtime and dev dependencies. The `.python-version` file pins the interpreter to Python 3.11.
+`uv sync` reads `pyproject.toml`, creates a `.venv` in the project root, and installs all runtime and dev dependencies. The `.python-version` file pins the interpreter to Python 3.14.
 
 To activate the venv in your shell (optional — `uv run` handles this automatically):
 
