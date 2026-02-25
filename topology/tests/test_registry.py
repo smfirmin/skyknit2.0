@@ -19,18 +19,11 @@ from pathlib import Path
 import pytest
 
 from topology import (
-    ArithmeticEntry,
     ArithmeticImplication,
-    CompatibilityEntry,
     CompatibilityResult,
-    Edge,
     EdgeType,
-    EdgeTypeEntry,
-    Join,
     JoinType,
-    JoinTypeEntry,
     RenderingMode,
-    WriterDispatchEntry,
     get_registry,
 )
 from topology.registry import TopologyRegistry
@@ -53,22 +46,37 @@ class TestRegistryLoads:
     def test_public_types_in_all(self):
         """All public types, including CompatibilityKey, must appear in topology.__all__."""
         import topology
+
         for name in [
-            "EdgeType", "JoinType", "CompatibilityResult", "ArithmeticImplication",
-            "RenderingMode", "Edge", "Join",
-            "EdgeTypeEntry", "JoinTypeEntry", "CompatibilityEntry",
-            "ArithmeticEntry", "WriterDispatchEntry",
-            "CompatibilityKey", "TopologyRegistry", "get_registry",
+            "EdgeType",
+            "JoinType",
+            "CompatibilityResult",
+            "ArithmeticImplication",
+            "RenderingMode",
+            "Edge",
+            "Join",
+            "EdgeTypeEntry",
+            "JoinTypeEntry",
+            "CompatibilityEntry",
+            "ArithmeticEntry",
+            "WriterDispatchEntry",
+            "CompatibilityKey",
+            "TopologyRegistry",
+            "get_registry",
         ]:
             assert name in topology.__all__, f"{name!r} missing from topology.__all__"
 
     def test_all_edge_types_present(self, registry):
         for et in EdgeType:
-            assert et in registry.edge_types, f"EdgeType.{et.value} missing from edge_types registry"
+            assert et in registry.edge_types, (
+                f"EdgeType.{et.value} missing from edge_types registry"
+            )
 
     def test_all_join_types_present(self, registry):
         for jt in JoinType:
-            assert jt in registry.join_types, f"JoinType.{jt.value} missing from join_types registry"
+            assert jt in registry.join_types, (
+                f"JoinType.{jt.value} missing from join_types registry"
+            )
 
     def test_all_join_types_have_arithmetic(self, registry):
         for jt in JoinType:
@@ -76,7 +84,9 @@ class TestRegistryLoads:
 
     def test_all_join_types_have_writer_dispatch(self, registry):
         for jt in JoinType:
-            assert jt in registry.writer_dispatch, f"JoinType.{jt.value} missing from writer_dispatch"
+            assert jt in registry.writer_dispatch, (
+                f"JoinType.{jt.value} missing from writer_dispatch"
+            )
 
     def test_edge_type_entries_have_descriptions(self, registry):
         for et, entry in registry.edge_types.items():
@@ -91,16 +101,18 @@ class TestRegistryLoads:
 
 
 class TestCompatibility:
-
-    @pytest.mark.parametrize("eta, etb, jt", [
-        # All combinations that must be VALID in top-down sweater construction
-        (EdgeType.LIVE_STITCH, EdgeType.LIVE_STITCH, JoinType.CONTINUATION),
-        (EdgeType.LIVE_STITCH, EdgeType.LIVE_STITCH, JoinType.HELD_STITCH),
-        (EdgeType.LIVE_STITCH, EdgeType.CAST_ON,     JoinType.CAST_ON_JOIN),
-        (EdgeType.BOUND_OFF,   EdgeType.LIVE_STITCH, JoinType.PICKUP),
-        (EdgeType.SELVEDGE,    EdgeType.LIVE_STITCH, JoinType.PICKUP),
-        (EdgeType.BOUND_OFF,   EdgeType.BOUND_OFF,   JoinType.SEAM),
-    ])
+    @pytest.mark.parametrize(
+        "eta, etb, jt",
+        [
+            # All combinations that must be VALID in top-down sweater construction
+            (EdgeType.LIVE_STITCH, EdgeType.LIVE_STITCH, JoinType.CONTINUATION),
+            (EdgeType.LIVE_STITCH, EdgeType.LIVE_STITCH, JoinType.HELD_STITCH),
+            (EdgeType.LIVE_STITCH, EdgeType.CAST_ON, JoinType.CAST_ON_JOIN),
+            (EdgeType.BOUND_OFF, EdgeType.LIVE_STITCH, JoinType.PICKUP),
+            (EdgeType.SELVEDGE, EdgeType.LIVE_STITCH, JoinType.PICKUP),
+            (EdgeType.BOUND_OFF, EdgeType.BOUND_OFF, JoinType.SEAM),
+        ],
+    )
     def test_known_valid(self, registry, eta, etb, jt):
         result = registry.get_compatibility(eta, etb, jt)
         assert result == CompatibilityResult.VALID, (
@@ -115,21 +127,22 @@ class TestCompatibility:
         assert result == CompatibilityResult.CONDITIONAL
 
     def test_conditional_has_condition_fn(self, registry):
-        fn = registry.get_condition_fn(
-            EdgeType.LIVE_STITCH, EdgeType.LIVE_STITCH, JoinType.SEAM
-        )
+        fn = registry.get_condition_fn(EdgeType.LIVE_STITCH, EdgeType.LIVE_STITCH, JoinType.SEAM)
         assert fn is not None and len(fn) > 0
 
-    @pytest.mark.parametrize("eta, etb, jt", [
-        # Edges that cannot participate in these joins
-        (EdgeType.CAST_ON,     EdgeType.LIVE_STITCH, JoinType.CONTINUATION),
-        (EdgeType.BOUND_OFF,   EdgeType.LIVE_STITCH, JoinType.CONTINUATION),
-        (EdgeType.OPEN,        EdgeType.LIVE_STITCH, JoinType.CONTINUATION),
-        (EdgeType.BOUND_OFF,   EdgeType.BOUND_OFF,   JoinType.CONTINUATION),
-        (EdgeType.CAST_ON,     EdgeType.CAST_ON,     JoinType.SEAM),
-        (EdgeType.LIVE_STITCH, EdgeType.LIVE_STITCH, JoinType.CAST_ON_JOIN),
-        (EdgeType.OPEN,        EdgeType.OPEN,         JoinType.SEAM),
-    ])
+    @pytest.mark.parametrize(
+        "eta, etb, jt",
+        [
+            # Edges that cannot participate in these joins
+            (EdgeType.CAST_ON, EdgeType.LIVE_STITCH, JoinType.CONTINUATION),
+            (EdgeType.BOUND_OFF, EdgeType.LIVE_STITCH, JoinType.CONTINUATION),
+            (EdgeType.OPEN, EdgeType.LIVE_STITCH, JoinType.CONTINUATION),
+            (EdgeType.BOUND_OFF, EdgeType.BOUND_OFF, JoinType.CONTINUATION),
+            (EdgeType.CAST_ON, EdgeType.CAST_ON, JoinType.SEAM),
+            (EdgeType.LIVE_STITCH, EdgeType.LIVE_STITCH, JoinType.CAST_ON_JOIN),
+            (EdgeType.OPEN, EdgeType.OPEN, JoinType.SEAM),
+        ],
+    )
     def test_known_invalid(self, registry, eta, etb, jt):
         result = registry.get_compatibility(eta, etb, jt)
         assert result == CompatibilityResult.INVALID, (
@@ -138,15 +151,13 @@ class TestCompatibility:
 
     def test_unknown_triple_returns_invalid(self, registry):
         """Any triple not in the table defaults to INVALID."""
-        result = registry.get_compatibility(
-            EdgeType.OPEN, EdgeType.OPEN, JoinType.CONTINUATION
-        )
+        result = registry.get_compatibility(EdgeType.OPEN, EdgeType.OPEN, JoinType.CONTINUATION)
         assert result == CompatibilityResult.INVALID
 
     def test_open_is_terminal_and_absent_from_compatibility(self, registry):
         """OPEN is flagged is_terminal and must not appear in any compatibility entry."""
         assert registry.edge_types[EdgeType.OPEN].is_terminal is True
-        for (eta, etb, _) in registry.compatibility:
+        for eta, etb, _ in registry.compatibility:
             assert eta != EdgeType.OPEN, "OPEN appeared as edge_type_a in compatibility"
             assert etb != EdgeType.OPEN, "OPEN appeared as edge_type_b in compatibility"
 
@@ -173,9 +184,7 @@ class TestCompatibility:
         assert fn is None
 
     def test_condition_fn_none_for_missing_entry(self, registry):
-        fn = registry.get_condition_fn(
-            EdgeType.OPEN, EdgeType.OPEN, JoinType.SEAM
-        )
+        fn = registry.get_condition_fn(EdgeType.OPEN, EdgeType.OPEN, JoinType.SEAM)
         assert fn is None
 
 
@@ -183,29 +192,20 @@ class TestCompatibility:
 
 
 class TestDefaults:
-
     def test_pickup_from_bound_off_has_ratio(self, registry):
-        defaults = registry.get_defaults(
-            EdgeType.BOUND_OFF, EdgeType.LIVE_STITCH, JoinType.PICKUP
-        )
+        defaults = registry.get_defaults(EdgeType.BOUND_OFF, EdgeType.LIVE_STITCH, JoinType.PICKUP)
         assert "pickup_ratio" in defaults
 
     def test_pickup_from_selvedge_has_ratio(self, registry):
-        defaults = registry.get_defaults(
-            EdgeType.SELVEDGE, EdgeType.LIVE_STITCH, JoinType.PICKUP
-        )
+        defaults = registry.get_defaults(EdgeType.SELVEDGE, EdgeType.LIVE_STITCH, JoinType.PICKUP)
         assert "pickup_ratio" in defaults
 
     def test_seam_has_method(self, registry):
-        defaults = registry.get_defaults(
-            EdgeType.BOUND_OFF, EdgeType.BOUND_OFF, JoinType.SEAM
-        )
+        defaults = registry.get_defaults(EdgeType.BOUND_OFF, EdgeType.BOUND_OFF, JoinType.SEAM)
         assert "seam_method" in defaults
 
     def test_three_needle_seam_has_method(self, registry):
-        defaults = registry.get_defaults(
-            EdgeType.LIVE_STITCH, EdgeType.LIVE_STITCH, JoinType.SEAM
-        )
+        defaults = registry.get_defaults(EdgeType.LIVE_STITCH, EdgeType.LIVE_STITCH, JoinType.SEAM)
         assert "seam_method" in defaults
         assert defaults["seam_method"] == "three_needle_bind_off"
 
@@ -231,13 +231,9 @@ class TestDefaults:
 
     def test_get_defaults_returns_copy(self, registry):
         """Mutating the returned dict must not affect the registry."""
-        defaults = registry.get_defaults(
-            EdgeType.BOUND_OFF, EdgeType.BOUND_OFF, JoinType.SEAM
-        )
+        defaults = registry.get_defaults(EdgeType.BOUND_OFF, EdgeType.BOUND_OFF, JoinType.SEAM)
         defaults["injected"] = "should not persist"
-        clean = registry.get_defaults(
-            EdgeType.BOUND_OFF, EdgeType.BOUND_OFF, JoinType.SEAM
-        )
+        clean = registry.get_defaults(EdgeType.BOUND_OFF, EdgeType.BOUND_OFF, JoinType.SEAM)
         assert "injected" not in clean
 
 
@@ -245,14 +241,16 @@ class TestDefaults:
 
 
 class TestArithmetic:
-
-    @pytest.mark.parametrize("jt, expected", [
-        (JoinType.CONTINUATION, ArithmeticImplication.ONE_TO_ONE),
-        (JoinType.HELD_STITCH,  ArithmeticImplication.ONE_TO_ONE),
-        (JoinType.CAST_ON_JOIN, ArithmeticImplication.ADDITIVE),
-        (JoinType.PICKUP,       ArithmeticImplication.RATIO),
-        (JoinType.SEAM,         ArithmeticImplication.STRUCTURAL),
-    ])
+    @pytest.mark.parametrize(
+        "jt, expected",
+        [
+            (JoinType.CONTINUATION, ArithmeticImplication.ONE_TO_ONE),
+            (JoinType.HELD_STITCH, ArithmeticImplication.ONE_TO_ONE),
+            (JoinType.CAST_ON_JOIN, ArithmeticImplication.ADDITIVE),
+            (JoinType.PICKUP, ArithmeticImplication.RATIO),
+            (JoinType.SEAM, ArithmeticImplication.STRUCTURAL),
+        ],
+    )
     def test_arithmetic_implications(self, registry, jt, expected):
         assert registry.get_arithmetic(jt) == expected
 
@@ -261,7 +259,6 @@ class TestArithmetic:
 
 
 class TestWriterDispatch:
-
     def test_continuation_is_inline(self, registry):
         entry = registry.get_writer_dispatch(JoinType.CONTINUATION)
         assert entry.rendering_mode == RenderingMode.INLINE
@@ -302,8 +299,12 @@ class TestWriterDispatch:
 
     def test_non_conditional_join_types_have_no_conditional_template_key(self, registry):
         """Join types with no CONDITIONAL variant must not have a conditional_template_key."""
-        for jt in (JoinType.CONTINUATION, JoinType.HELD_STITCH,
-                   JoinType.CAST_ON_JOIN, JoinType.PICKUP):
+        for jt in (
+            JoinType.CONTINUATION,
+            JoinType.HELD_STITCH,
+            JoinType.CAST_ON_JOIN,
+            JoinType.PICKUP,
+        ):
             entry = registry.get_writer_dispatch(jt)
             assert entry.conditional_template_key is None, (
                 f"JoinType.{jt.value} unexpectedly has conditional_template_key"
@@ -314,7 +315,6 @@ class TestWriterDispatch:
 
 
 class TestCrossReferenceValidation:
-
     def test_bad_join_type_in_compatibility_raises(self, tmp_path):
         """A compatibility entry referencing a nonexistent join type must fail at load."""
         data_dir = tmp_path / "data"
@@ -383,7 +383,7 @@ class TestCrossReferenceValidation:
                 "    edge_type_b: LIVE_STITCH\n"
                 "    join_type: PICKUP\n"
                 "    defaults:\n"
-                "      pickup_ratio: \"3:4\"\n"
+                '      pickup_ratio: "3:4"\n'
             )
         )
         with pytest.raises(ValueError):

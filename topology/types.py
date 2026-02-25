@@ -13,7 +13,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Optional
 
-
 # ── Enums ──────────────────────────────────────────────────────────────────────
 
 
@@ -46,10 +45,10 @@ class CompatibilityResult(str, Enum):
 class ArithmeticImplication(str, Enum):
     """How a join type affects the active stitch count at its boundary."""
 
-    ONE_TO_ONE = "ONE_TO_ONE"   # count carries over unchanged
-    ADDITIVE = "ADDITIVE"       # new stitches introduced (cast_on_count)
-    RATIO = "RATIO"             # count derived from source length × pickup_ratio
-    STRUCTURAL = "STRUCTURAL"   # two stitch sets consumed and merged
+    ONE_TO_ONE = "ONE_TO_ONE"  # count carries over unchanged
+    ADDITIVE = "ADDITIVE"  # new stitches introduced (cast_on_count)
+    RATIO = "RATIO"  # count derived from source length × pickup_ratio
+    STRUCTURAL = "STRUCTURAL"  # two stitch sets consumed and merged
 
 
 class RenderingMode(str, Enum):
@@ -133,6 +132,6 @@ class Join:
 
     id: str
     join_type: JoinType
-    edge_a_ref: str                              # "component_name.edge_name"
-    edge_b_ref: str                              # "component_name.edge_name"
+    edge_a_ref: str  # "component_name.edge_name"
+    edge_b_ref: str  # "component_name.edge_name"
     parameters: dict[str, Any] = field(default_factory=dict)  # join-owned parameters

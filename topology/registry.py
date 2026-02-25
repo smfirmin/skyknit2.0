@@ -33,7 +33,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import MappingProxyType
-from typing import Any, NamedTuple, Optional
+from typing import Any, NamedTuple, Optional, cast
 
 import yaml
 
@@ -95,19 +95,15 @@ class TopologyRegistry:
 
     # ── Loading ────────────────────────────────────────────────────────────────
 
-    def _load_yaml(self, filename: str) -> dict:
+    def _load_yaml(self, filename: str) -> dict[str, Any]:
         path = self._data_dir / filename
         try:
             with open(path) as f:
-                return yaml.safe_load(f)
+                return cast(dict[str, Any], yaml.safe_load(f))
         except FileNotFoundError:
-            raise FileNotFoundError(
-                f"Topology data file not found: {path}"
-            ) from None
+            raise FileNotFoundError(f"Topology data file not found: {path}") from None
         except yaml.YAMLError as exc:
-            raise ValueError(
-                f"Failed to parse topology data file {path}: {exc}"
-            ) from exc
+            raise ValueError(f"Failed to parse topology data file {path}: {exc}") from exc
 
     def _load_all(self) -> None:
         self._load_edge_types()
@@ -229,9 +225,7 @@ class TopologyRegistry:
         Checks: (a) referenced edge/join types exist, (b) referenced edge types
         are not terminal, (c) CONDITIONAL entries have a condition_fn.
         """
-        terminal_types = {
-            et for et, entry in self.edge_types.items() if entry.is_terminal
-        }
+        terminal_types = {et for et, entry in self.edge_types.items() if entry.is_terminal}
         for key, entry in self.compatibility.items():
             prefix = (
                 f"compatibility entry "
@@ -254,25 +248,17 @@ class TopologyRegistry:
                     f"{prefix}: edge_type_b {key.edge_type_b!r} is terminal and cannot appear in compatibility"
                 )
             if key.join_type not in self.join_types:
-                errors.append(
-                    f"{prefix}: join_type {key.join_type!r} is not defined in join_types"
-                )
+                errors.append(f"{prefix}: join_type {key.join_type!r} is not defined in join_types")
             if entry.result == CompatibilityResult.CONDITIONAL and not entry.condition_fn:
-                errors.append(
-                    f"{prefix}: result is CONDITIONAL but condition_fn is not set"
-                )
+                errors.append(f"{prefix}: result is CONDITIONAL but condition_fn is not set")
 
     def _check_join_type_completeness(self, errors: list[str]) -> None:
         """Every join type must have exactly one arithmetic and one writer dispatch entry."""
         for jt in self.join_types:
             if jt not in self.arithmetic:
-                errors.append(
-                    f"join_types entry {jt!r}: no entry in arithmetic_implications"
-                )
+                errors.append(f"join_types entry {jt!r}: no entry in arithmetic_implications")
             if jt not in self.writer_dispatch:
-                errors.append(
-                    f"join_types entry {jt!r}: no entry in writer_dispatch"
-                )
+                errors.append(f"join_types entry {jt!r}: no entry in writer_dispatch")
 
     def _check_defaults_references(self, errors: list[str]) -> None:
         """Defaults table must reference only known edge and join types."""
@@ -290,9 +276,7 @@ class TopologyRegistry:
                     f"{prefix}: edge_type_b {key.edge_type_b!r} is not defined in edge_types"
                 )
             if key.join_type not in self.join_types:
-                errors.append(
-                    f"{prefix}: join_type {key.join_type!r} is not defined in join_types"
-                )
+                errors.append(f"{prefix}: join_type {key.join_type!r} is not defined in join_types")
 
     # ── Query API ──────────────────────────────────────────────────────────────
 
@@ -325,9 +309,7 @@ class TopologyRegistry:
         join_type: JoinType,
     ) -> dict[str, Any]:
         """Return a copy of default join-owned parameters for the given triple."""
-        return dict(
-            self.defaults.get(CompatibilityKey(edge_type_a, edge_type_b, join_type), {})
-        )
+        return dict(self.defaults.get(CompatibilityKey(edge_type_a, edge_type_b, join_type), {}))
 
     def get_arithmetic(self, join_type: JoinType) -> ArithmeticImplication:
         """Return the arithmetic implication for the given join type.
@@ -339,9 +321,7 @@ class TopologyRegistry:
         try:
             return self.arithmetic[join_type].implication
         except KeyError:
-            raise KeyError(
-                f"No arithmetic entry for join type {join_type!r}"
-            ) from None
+            raise KeyError(f"No arithmetic entry for join type {join_type!r}") from None
 
     def get_writer_dispatch(self, join_type: JoinType) -> WriterDispatchEntry:
         """Return the writer dispatch entry for the given join type.
@@ -353,9 +333,7 @@ class TopologyRegistry:
         try:
             return self.writer_dispatch[join_type]
         except KeyError:
-            raise KeyError(
-                f"No writer dispatch entry for join type {join_type!r}"
-            ) from None
+            raise KeyError(f"No writer dispatch entry for join type {join_type!r}") from None
 
 
 # ── Module-level singleton ─────────────────────────────────────────────────────
