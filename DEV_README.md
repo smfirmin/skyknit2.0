@@ -93,6 +93,20 @@ Ruff is configured in `pyproject.toml` under `[tool.ruff]`. The active rule sets
 
 ---
 
+## Type Checking
+
+This project uses [mypy](https://mypy.readthedocs.io/) in strict mode.
+
+**Run type checks:**
+
+```bash
+uv run mypy topology/
+```
+
+Mypy is configured in `pyproject.toml` under `[tool.mypy]` with `strict = true` and `ignore_missing_imports = true` (the latter covers third-party packages like PyYAML that ship without type stubs).
+
+---
+
 ## Project Structure
 
 ```
@@ -113,7 +127,7 @@ skyknit2.0/
 │   │   └── writer_dispatch.yaml
 │   └── tests/
 │       └── test_registry.py
-├── .python-version         # Pins Python 3.11 for uv
+├── .python-version         # Pins Python 3.14 for uv
 ├── pyproject.toml          # Project metadata, deps, tool config
 ├── ARCHITECTURE.md         # System design reference
 ├── CITATIONS.md            # Academic references
@@ -126,14 +140,15 @@ skyknit2.0/
 
 The GitHub Actions workflow at `.github/workflows/ci.yml` runs on every push and on pull requests targeting `main`/`master`.
 
-It runs two parallel jobs:
+It runs three parallel jobs:
 
 | Job | Steps |
 |-----|-------|
 | **lint** | `ruff check .` + `ruff format --check .` |
+| **typecheck** | `mypy topology/` |
 | **test** | `pytest -v` |
 
-Both jobs use `astral-sh/setup-uv` to install uv, then `uv sync --extra dev` to install all dependencies before running.
+All jobs use `astral-sh/setup-uv` with caching enabled, then `uv sync --extra dev` to install dependencies.
 
 ---
 
