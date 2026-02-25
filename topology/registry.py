@@ -32,7 +32,7 @@ does not hold a reference to the callable.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TypeAlias
 
 import yaml
 
@@ -52,7 +52,7 @@ from .types import (
 _DATA_DIR = Path(__file__).parent / "data"
 
 # (edge_type_a, edge_type_b, join_type)
-CompatibilityKey = tuple[EdgeType, EdgeType, JoinType]
+CompatibilityKey: TypeAlias = tuple[EdgeType, EdgeType, JoinType]
 
 
 class TopologyRegistry:
@@ -216,8 +216,16 @@ class TopologyRegistry:
                     f"join type {jt!r} has no entry in writer_dispatch"
                 )
 
-        # Defaults must reference only known join types
-        for (_, _, jt) in self.defaults:
+        # Defaults must reference only known edge and join types
+        for (eta, etb, jt) in self.defaults:
+            if eta not in self.edge_types:
+                errors.append(
+                    f"defaults references unknown edge_type_a: {eta!r}"
+                )
+            if etb not in self.edge_types:
+                errors.append(
+                    f"defaults references unknown edge_type_b: {etb!r}"
+                )
             if jt not in self.join_types:
                 errors.append(
                     f"defaults references unknown join_type: {jt!r}"

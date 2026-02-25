@@ -19,11 +19,18 @@ from pathlib import Path
 import pytest
 
 from topology import (
+    ArithmeticEntry,
     ArithmeticImplication,
+    CompatibilityEntry,
     CompatibilityResult,
+    Edge,
     EdgeType,
+    EdgeTypeEntry,
+    Join,
     JoinType,
+    JoinTypeEntry,
     RenderingMode,
+    WriterDispatchEntry,
     get_registry,
 )
 from topology.registry import TopologyRegistry
@@ -42,6 +49,16 @@ def registry():
 class TestRegistryLoads:
     def test_loads_without_error(self, registry):
         assert registry is not None
+
+    def test_entry_types_importable_from_package(self):
+        """All registry entry types must be importable from the top-level package."""
+        assert EdgeTypeEntry is not None
+        assert JoinTypeEntry is not None
+        assert CompatibilityEntry is not None
+        assert ArithmeticEntry is not None
+        assert WriterDispatchEntry is not None
+        assert Edge is not None
+        assert Join is not None
 
     def test_all_edge_types_present(self, registry):
         for et in EdgeType:
@@ -346,6 +363,25 @@ class TestCrossReferenceValidation:
                 "    edge_type_b: LIVE_STITCH\n"
                 "    join_type: CONTINUATION\n"
                 "    result: VALID\n"
+            )
+        )
+        with pytest.raises(ValueError):
+            TopologyRegistry(data_dir=data_dir)
+
+    def test_bad_edge_type_in_defaults_raises(self, tmp_path):
+        """A defaults entry referencing an unknown edge type must fail at load."""
+        data_dir = tmp_path / "data"
+        shutil.copytree(_DATA_DIR, data_dir)
+
+        bad = data_dir / "defaults.yaml"
+        bad.write_text(
+            bad.read_text()
+            + (
+                "\n  - edge_type_a: NONEXISTENT_EDGE\n"
+                "    edge_type_b: LIVE_STITCH\n"
+                "    join_type: PICKUP\n"
+                "    defaults:\n"
+                "      pickup_ratio: \"3:4\"\n"
             )
         )
         with pytest.raises(ValueError):
