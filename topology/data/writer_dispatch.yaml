@@ -13,6 +13,11 @@ version: "1.0"
 # directionality_note: true if the Writer must emit left/right variants
 # driven by the handedness annotation on the component (e.g. "left sleeve" vs
 # "right sleeve", SSK vs K2tog).
+#
+# conditional_template_key: alternate template key used when the compatibility
+# table result is CONDITIONAL (i.e. the join passed a condition_fn check).
+# The Writer inspects the join's parameters to decide which template to use.
+# Omit this field (or leave null) when there is no conditional variant.
 
 entries:
 
@@ -52,9 +57,13 @@ entries:
   - join_type: SEAM
     rendering_mode: header_note
     template_key: seam_note
+    conditional_template_key: three_needle_block
     directionality_note: false
     notes: >
-      Emits a finishing note at the relevant section header, e.g.
-      "You will seam this edge to the sleeve cap when finishing."
-      The three-needle bind-off variant (CONDITIONAL) uses template key
-      three_needle_block and renders as an instruction block instead.
+      Standard case (BOUND_OFF × BOUND_OFF): emits a finishing note at the
+      relevant section header, e.g. "You will seam this edge to the sleeve
+      cap when finishing." (rendering_mode: header_note, template: seam_note).
+      Three-needle bind-off variant (CONDITIONAL, LIVE_STITCH × LIVE_STITCH):
+      the Writer detects this via join.parameters["seam_method"] ==
+      "three_needle_bind_off" and switches to conditional_template_key
+      (three_needle_block), rendering as an instruction block instead.

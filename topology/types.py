@@ -104,6 +104,7 @@ class WriterDispatchEntry:
     rendering_mode: RenderingMode
     template_key: str
     directionality_note: bool
+    conditional_template_key: Optional[str] = None  # used when compatibility result is CONDITIONAL
     notes: str = ""
 
 

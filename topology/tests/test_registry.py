@@ -124,6 +124,17 @@ class TestCompatibility:
         )
         assert result == CompatibilityResult.INVALID
 
+    def test_open_is_terminal_and_absent_from_compatibility(self, registry):
+        """OPEN is flagged is_terminal and must not appear in any compatibility entry."""
+        assert registry.edge_types[EdgeType.OPEN].is_terminal is True
+        for (eta, etb, _) in registry.compatibility:
+            assert eta != EdgeType.OPEN, "OPEN appeared as edge_type_a in compatibility"
+            assert etb != EdgeType.OPEN, "OPEN appeared as edge_type_b in compatibility"
+
+    def test_open_has_live_stitches_false(self, registry):
+        """OPEN has_live_stitches must be false: liveness is instance-dependent, not a type guarantee."""
+        assert registry.edge_types[EdgeType.OPEN].has_live_stitches is False
+
     def test_key_is_ordered_not_commutative(self, registry):
         """(LIVE_STITCH, CAST_ON, CAST_ON_JOIN) is VALID; the reverse is INVALID."""
         forward = registry.get_compatibility(
@@ -265,6 +276,20 @@ class TestWriterDispatch:
             entry = registry.get_writer_dispatch(jt)
             assert entry.template_key, f"JoinType.{jt.value} has empty template_key"
 
+    def test_seam_has_conditional_template_key(self, registry):
+        """SEAM must expose a conditional_template_key for three-needle bind-off."""
+        entry = registry.get_writer_dispatch(JoinType.SEAM)
+        assert entry.conditional_template_key == "three_needle_block"
+
+    def test_non_conditional_join_types_have_no_conditional_template_key(self, registry):
+        """Join types with no CONDITIONAL variant must not have a conditional_template_key."""
+        for jt in (JoinType.CONTINUATION, JoinType.HELD_STITCH,
+                   JoinType.CAST_ON_JOIN, JoinType.PICKUP):
+            entry = registry.get_writer_dispatch(jt)
+            assert entry.conditional_template_key is None, (
+                f"JoinType.{jt.value} unexpectedly has conditional_template_key"
+            )
+
 
 # ── Cross-reference validation at load time ────────────────────────────────────
 
@@ -286,7 +311,7 @@ class TestCrossReferenceValidation:
                 "    result: VALID\n"
             )
         )
-        with pytest.raises((ValueError, Exception)):
+        with pytest.raises(ValueError):
             TopologyRegistry(data_dir=data_dir)
 
     def test_conditional_without_condition_fn_raises(self, tmp_path):
@@ -305,5 +330,23 @@ class TestCrossReferenceValidation:
                 # condition_fn deliberately omitted
             )
         )
-        with pytest.raises((ValueError, Exception)):
+        with pytest.raises(ValueError):
+            TopologyRegistry(data_dir=data_dir)
+
+    def test_terminal_edge_in_compatibility_raises(self, tmp_path):
+        """A compatibility entry referencing a terminal edge type must fail at load."""
+        data_dir = tmp_path / "data"
+        shutil.copytree(_DATA_DIR, data_dir)
+
+        bad = data_dir / "compatibility.yaml"
+        bad.write_text(
+            bad.read_text()
+            + (
+                "\n  - edge_type_a: OPEN\n"
+                "    edge_type_b: LIVE_STITCH\n"
+                "    join_type: CONTINUATION\n"
+                "    result: VALID\n"
+            )
+        )
+        with pytest.raises(ValueError):
             TopologyRegistry(data_dir=data_dir)

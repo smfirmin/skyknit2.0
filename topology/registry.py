@@ -3,8 +3,30 @@ Topology registry: loads all lookup tables from YAML at startup, validates
 cross-references, and exposes a read-only query API.
 
 The registry is a module-level singleton; call get_registry() to obtain it.
-All tables are loaded and validated once on first access. Nothing writes to
+All tables are loaded and validated once at import time. Nothing writes to
 the registry after startup.
+
+──────────────────────────────────────────────────────────────────────────────
+condition_fn contract
+──────────────────────────────────────────────────────────────────────────────
+CONDITIONAL compatibility entries carry a condition_fn field: the name of a
+Python callable that the Geometric Validator must resolve and invoke to
+determine whether a specific join instance satisfies the constraint.
+
+Expected signature:
+    def <condition_fn>(join: topology.types.Join,
+                       manifest: planner.ShapeManifest) -> bool:
+        ...
+
+The function must be pure (no side effects), deterministic, and raise
+ValueError (not return False) if the join parameters are structurally invalid
+(e.g. missing required keys). A return value of True means the join passes;
+False means it fails the constraint.
+
+Condition functions are registered in geometry_validator.conditions and looked
+up by name at validation time. The registry only stores the name string; it
+does not hold a reference to the callable.
+──────────────────────────────────────────────────────────────────────────────
 """
 
 from __future__ import annotations
@@ -141,6 +163,7 @@ class TopologyRegistry:
                 rendering_mode=RenderingMode(entry["rendering_mode"]),
                 template_key=entry["template_key"],
                 directionality_note=entry["directionality_note"],
+                conditional_template_key=entry.get("conditional_template_key"),
                 notes=entry.get("notes", "").strip(),
             )
 
@@ -200,6 +223,22 @@ class TopologyRegistry:
                     f"defaults references unknown join_type: {jt!r}"
                 )
 
+        # Terminal edge types must not appear in the compatibility table.
+        # An is_terminal edge type has no join slot; any compatibility entry
+        # that references one is a data error.
+        terminal_types = {
+            et for et, entry in self.edge_types.items() if entry.is_terminal
+        }
+        for (eta, etb, _) in self.compatibility:
+            if eta in terminal_types:
+                errors.append(
+                    f"compatibility references terminal edge_type_a: {eta!r}"
+                )
+            if etb in terminal_types:
+                errors.append(
+                    f"compatibility references terminal edge_type_b: {etb!r}"
+                )
+
         if errors:
             raise ValueError(
                 "Topology registry cross-reference validation failed:\n"
@@ -247,13 +286,14 @@ class TopologyRegistry:
 
 
 # ── Module-level singleton ─────────────────────────────────────────────────────
+#
+# Initialized eagerly at import time so there is no lazy-init race condition
+# in concurrent contexts. The registry is read-only after construction, so
+# sharing it across threads is safe.
 
-_registry: Optional[TopologyRegistry] = None
+_registry: TopologyRegistry = TopologyRegistry()
 
 
 def get_registry() -> TopologyRegistry:
-    """Return the module-level registry singleton, loading it on first call."""
-    global _registry
-    if _registry is None:
-        _registry = TopologyRegistry()
+    """Return the module-level registry singleton."""
     return _registry

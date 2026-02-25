@@ -5,19 +5,29 @@ version: "1.0"
 # populates and the Stitch Fillers must arrive at correctly.
 #
 # OPEN edges are terminal (cuff, hem, neckline) and carry no join slot.
+#
+# has_live_stitches: true means this edge type ALWAYS carries live stitches as
+# a structural guarantee (i.e. the type-level invariant holds for every
+# instance). false means live stitches are either absent or instance-dependent.
+# For OPEN edges specifically, live stitch presence is determined per-instance
+# by the Planner (a cuff left on the needle is live; a hemmed edge is not).
 
 edge_types:
 
   - id: CAST_ON
     description: >
       Starting edge where stitches are created. The component begins here.
-      Stitches exist but have not yet been worked.
+      Stitches are on the needle but have not yet been worked by the yarn.
     has_live_stitches: false
     is_terminal: false
     phase_constraint: start
     notes: >
       The cast-on row itself. In a top-down sweater the yoke typically begins
-      with a CAST_ON edge at the collar.
+      with a CAST_ON edge at the collar. Cast-on stitches are on the needle
+      (unlike BOUND_OFF) but are not "live" in the active-work sense — they
+      are the destination of a CAST_ON_JOIN and become a LIVE_STITCH boundary
+      only after the first row is worked. has_live_stitches is false to
+      distinguish this phase from a LIVE_STITCH edge.
 
   - id: LIVE_STITCH
     description: >
@@ -58,10 +68,14 @@ edge_types:
     description: >
       Terminal edge with no join. Represents a deliberate open boundary:
       cuff, hem, neckline, or any edge that is left unjoined.
-    has_live_stitches: true
+    has_live_stitches: false
     is_terminal: true
     phase_constraint: end
     notes: >
-      Has no join slot. May have live stitches (e.g. a cuff worked in the
-      round and left on the needle) or not (a hemmed edge). The Planner
-      marks terminal edges OPEN; the Writer renders them as pattern endings.
+      Has no join slot. Live stitch presence is INSTANCE-DEPENDENT, not a
+      type-level guarantee: a cuff worked in the round and left on the needle
+      has live stitches; a hemmed edge does not. has_live_stitches is therefore
+      false at the type level (no structural guarantee). The Planner sets a
+      per-instance live_stitches flag when building the shape manifest.
+      The Writer renders OPEN edges as pattern endings (e.g. "Break yarn",
+      "Leave sts on needle for grafting").

@@ -76,11 +76,18 @@ join_types:
       - pickup_ratio
       - pickup_direction
     construction_methods:
-      - all
+      - raglan_seamless
+      - circular_yoke
+      - set_in_sleeve
+      - saddle_shoulder
+      - saddle_shoulder_seamed
+      - drop_shoulder
+      - seamed_raglan
     notes: >
-      Used for neckbands, button bands, and sleeve pickup in bottom-up
-      construction. The pickup ratio governs how many stitches are created
-      per unit of source edge length. Arithmetic implication: RATIO.
+      Applies to all known construction methods — used for neckbands, button
+      bands, and sleeve pickup universally. The pickup ratio governs how many
+      stitches are created per unit of source edge length.
+      Arithmetic implication: RATIO.
 
   - id: SEAM
     description: >
