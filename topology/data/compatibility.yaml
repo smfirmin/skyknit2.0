@@ -1,0 +1,73 @@
+version: "1.0"
+
+# Compatibility table: (edge_type_a, edge_type_b, join_type) → VALID / CONDITIONAL / INVALID
+#
+# KEY IS ORDERED.
+#   edge_type_a — edge from the first component (typically upstream / source)
+#   edge_type_b — edge from the second component (typically downstream / receiving)
+#
+# This ordering reflects join directionality and is NOT a commutative pair.
+# The Compatibility Table key is the primary knittability criterion: an entry
+# absent from this table is implicitly INVALID.
+#
+# CONDITIONAL entries carry a condition_fn naming a constraint function in code.
+# The function receives the two Join edges and their Join object and returns bool.
+#
+# Grounded in:
+#   - Formal knittability criteria (Topological Defect Propagation, 2025)
+#   - Wooly Graphs Hamiltonian/Eulerian path model (Bell, 2024)
+#   - Construction method topology (raglan, yoke, set-in, saddle — per CITATIONS.md)
+
+entries:
+
+  # ── CONTINUATION ──────────────────────────────────────────────────────────────
+  # Seamless yarn continuation. Hamiltonian path crosses the boundary unbroken.
+  # Both edges must be live; ordering reflects knitting direction.
+  - edge_type_a: LIVE_STITCH
+    edge_type_b: LIVE_STITCH
+    join_type: CONTINUATION
+    result: VALID
+
+  # ── HELD_STITCH ───────────────────────────────────────────────────────────────
+  # Live stitches placed on hold; both sides are live at the moment of separation.
+  - edge_type_a: LIVE_STITCH
+    edge_type_b: LIVE_STITCH
+    join_type: HELD_STITCH
+    result: VALID
+
+  # ── CAST_ON_JOIN ──────────────────────────────────────────────────────────────
+  # New stitches cast on at an active boundary.
+  # Source (a) is live; destination (b) is a fresh cast-on edge.
+  - edge_type_a: LIVE_STITCH
+    edge_type_b: CAST_ON
+    join_type: CAST_ON_JOIN
+    result: VALID
+
+  # ── PICKUP ────────────────────────────────────────────────────────────────────
+  # Stitches picked up from a bound-off edge (e.g. neckband from neck cast-off).
+  - edge_type_a: BOUND_OFF
+    edge_type_b: LIVE_STITCH
+    join_type: PICKUP
+    result: VALID
+
+  # Stitches picked up from a selvedge / row-end edge (e.g. button band from front).
+  - edge_type_a: SELVEDGE
+    edge_type_b: LIVE_STITCH
+    join_type: PICKUP
+    result: VALID
+
+  # ── SEAM ──────────────────────────────────────────────────────────────────────
+  # Standard seam: two bound-off edges joined post-construction.
+  - edge_type_a: BOUND_OFF
+    edge_type_b: BOUND_OFF
+    join_type: SEAM
+    result: VALID
+
+  # Three-needle bind-off: seam two live-stitch edges simultaneously on needles.
+  # CONDITIONAL: stitch counts on both sides must match; construction sequence
+  # must place both sets of live stitches on needles at the same moment.
+  - edge_type_a: LIVE_STITCH
+    edge_type_b: LIVE_STITCH
+    join_type: SEAM
+    result: CONDITIONAL
+    condition_fn: three_needle_compatible

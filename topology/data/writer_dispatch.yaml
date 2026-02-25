@@ -1,0 +1,69 @@
+version: "1.0"
+
+# Writer dispatch table.
+# Controls how the Writer module renders each join type in pattern prose.
+# The Writer reads this table to select a rendering mode and template key
+# for each join it encounters in the assembled IR.
+#
+# Rendering modes:
+#   inline       — no special block; the writer continues prose naturally
+#   instruction  — generates a dedicated instruction block with its own line
+#   header_note  — generates a note at the section header for finishing reference
+#
+# directionality_note: true if the Writer must emit left/right variants
+# driven by the handedness annotation on the component (e.g. "left sleeve" vs
+# "right sleeve", SSK vs K2tog).
+#
+# conditional_template_key: alternate template key used when the compatibility
+# table result is CONDITIONAL (i.e. the join passed a condition_fn check).
+# The Writer inspects the join's parameters to decide which template to use.
+# Omit this field (or leave null) when there is no conditional variant.
+
+entries:
+
+  - join_type: CONTINUATION
+    rendering_mode: inline
+    template_key: continuation_inline
+    directionality_note: false
+    notes: >
+      No explicit join instruction needed. The writer continues pattern prose
+      without interruption (e.g. "Continue knitting in the round.").
+
+  - join_type: HELD_STITCH
+    rendering_mode: instruction
+    template_key: held_stitch_block
+    directionality_note: true
+    notes: >
+      Emits: "Place next X sts on holder for [component name]."
+      Handedness drives left/right label on the component name.
+
+  - join_type: CAST_ON_JOIN
+    rendering_mode: instruction
+    template_key: cast_on_join_block
+    directionality_note: false
+    notes: >
+      Emits: "Using [cast_on_method], cast on X sts."
+      cast_on_count from the Join object drives X.
+
+  - join_type: PICKUP
+    rendering_mode: instruction
+    template_key: pickup_block
+    directionality_note: true
+    notes: >
+      Emits: "Pick up and knit X sts along [edge description]."
+      Derived stitch count and pickup_direction from the Join object.
+      Handedness drives left/right edge label.
+
+  - join_type: SEAM
+    rendering_mode: header_note
+    template_key: seam_note
+    conditional_template_key: three_needle_block
+    directionality_note: false
+    notes: >
+      Standard case (BOUND_OFF × BOUND_OFF): emits a finishing note at the
+      relevant section header, e.g. "You will seam this edge to the sleeve
+      cap when finishing." (rendering_mode: header_note, template: seam_note).
+      Three-needle bind-off variant (CONDITIONAL, LIVE_STITCH × LIVE_STITCH):
+      the Writer detects this via join.parameters["seam_method"] ==
+      "three_needle_bind_off" and switches to conditional_template_key
+      (three_needle_block), rendering as an instruction block instead.
