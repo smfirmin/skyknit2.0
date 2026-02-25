@@ -50,15 +50,17 @@ class TestRegistryLoads:
     def test_loads_without_error(self, registry):
         assert registry is not None
 
-    def test_entry_types_importable_from_package(self):
-        """All registry entry types must be importable from the top-level package."""
-        assert EdgeTypeEntry is not None
-        assert JoinTypeEntry is not None
-        assert CompatibilityEntry is not None
-        assert ArithmeticEntry is not None
-        assert WriterDispatchEntry is not None
-        assert Edge is not None
-        assert Join is not None
+    def test_public_types_in_all(self):
+        """All public types, including CompatibilityKey, must appear in topology.__all__."""
+        import topology
+        for name in [
+            "EdgeType", "JoinType", "CompatibilityResult", "ArithmeticImplication",
+            "RenderingMode", "Edge", "Join",
+            "EdgeTypeEntry", "JoinTypeEntry", "CompatibilityEntry",
+            "ArithmeticEntry", "WriterDispatchEntry",
+            "CompatibilityKey", "TopologyRegistry", "get_registry",
+        ]:
+            assert name in topology.__all__, f"{name!r} missing from topology.__all__"
 
     def test_all_edge_types_present(self, registry):
         for et in EdgeType:
@@ -96,7 +98,7 @@ class TestCompatibility:
         (EdgeType.LIVE_STITCH, EdgeType.LIVE_STITCH, JoinType.HELD_STITCH),
         (EdgeType.LIVE_STITCH, EdgeType.CAST_ON,     JoinType.CAST_ON_JOIN),
         (EdgeType.BOUND_OFF,   EdgeType.LIVE_STITCH, JoinType.PICKUP),
-        (EdgeType.PICKUP,      EdgeType.LIVE_STITCH, JoinType.PICKUP),
+        (EdgeType.SELVEDGE,    EdgeType.LIVE_STITCH, JoinType.PICKUP),
         (EdgeType.BOUND_OFF,   EdgeType.BOUND_OFF,   JoinType.SEAM),
     ])
     def test_known_valid(self, registry, eta, etb, jt):
@@ -190,7 +192,7 @@ class TestDefaults:
 
     def test_pickup_from_selvedge_has_ratio(self, registry):
         defaults = registry.get_defaults(
-            EdgeType.PICKUP, EdgeType.LIVE_STITCH, JoinType.PICKUP
+            EdgeType.SELVEDGE, EdgeType.LIVE_STITCH, JoinType.PICKUP
         )
         assert "pickup_ratio" in defaults
 

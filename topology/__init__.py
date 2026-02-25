@@ -12,7 +12,7 @@ from .types import (
     RenderingMode,
     WriterDispatchEntry,
 )
-from .registry import TopologyRegistry, get_registry
+from .registry import CompatibilityKey, TopologyRegistry, get_registry
 
 __all__ = [
     # Enums
@@ -31,6 +31,7 @@ __all__ = [
     "ArithmeticEntry",
     "WriterDispatchEntry",
     # Registry
+    "CompatibilityKey",
     "TopologyRegistry",
     "get_registry",
 ]

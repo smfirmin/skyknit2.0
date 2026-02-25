@@ -10,7 +10,7 @@ version: "1.0"
 #   drop_shoulder, seamed_raglan — used by the Planner to validate that a
 #   proposed join is consistent with the chosen construction method.
 
-join_types:
+entries:
 
   - id: CONTINUATION
     description: >

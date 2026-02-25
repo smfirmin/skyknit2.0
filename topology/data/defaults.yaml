@@ -24,7 +24,7 @@ entries:
       pickup_ratio: "3:4"            # 3 sts per 4 rows; standard for stockinette at most gauges
       pickup_direction: right_to_left
 
-  - edge_type_a: PICKUP
+  - edge_type_a: SELVEDGE
     edge_type_b: LIVE_STITCH
     join_type: PICKUP
     defaults:

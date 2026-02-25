@@ -51,7 +51,7 @@ entries:
     result: VALID
 
   # Stitches picked up from a selvedge / row-end edge (e.g. button band from front).
-  - edge_type_a: PICKUP
+  - edge_type_a: SELVEDGE
     edge_type_b: LIVE_STITCH
     join_type: PICKUP
     result: VALID

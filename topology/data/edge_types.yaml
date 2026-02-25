@@ -12,7 +12,7 @@ version: "1.0"
 # For OPEN edges specifically, live stitch presence is determined per-instance
 # by the Planner (a cuff left on the needle is live; a hemmed edge is not).
 
-edge_types:
+entries:
 
   - id: CAST_ON
     description: >
@@ -51,7 +51,7 @@ edge_types:
       Used as the source side of PICKUP joins and both sides of SEAM joins.
       Typical in set-in sleeve construction and bottom-up shoulder seams.
 
-  - id: PICKUP
+  - id: SELVEDGE
     description: >
       Selvedge or row-end edge from which stitches can be picked up.
       This is a lateral boundary of a component, running along knitted rows

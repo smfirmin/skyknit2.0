@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
 
 # ── Enums ──────────────────────────────────────────────────────────────────────
@@ -23,7 +23,7 @@ class EdgeType(str, Enum):
     CAST_ON = "CAST_ON"
     LIVE_STITCH = "LIVE_STITCH"
     BOUND_OFF = "BOUND_OFF"
-    PICKUP = "PICKUP"
+    SELVEDGE = "SELVEDGE"
     OPEN = "OPEN"
 
 
@@ -135,4 +135,4 @@ class Join:
     join_type: JoinType
     edge_a_ref: str                              # "component_name.edge_name"
     edge_b_ref: str                              # "component_name.edge_name"
-    parameters: dict = field(default_factory=dict)  # join-owned parameters
+    parameters: dict[str, Any] = field(default_factory=dict)  # join-owned parameters
