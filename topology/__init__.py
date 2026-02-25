@@ -1,3 +1,4 @@
+from .registry import CompatibilityKey, TopologyRegistry, get_registry
 from .types import (
     ArithmeticEntry,
     ArithmeticImplication,
@@ -12,7 +13,6 @@ from .types import (
     RenderingMode,
     WriterDispatchEntry,
 )
-from .registry import CompatibilityKey, TopologyRegistry, get_registry
 
 __all__ = [
     # Enums
