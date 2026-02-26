@@ -7,6 +7,7 @@ from utilities.conversion import (
     inches_to_mm,
     mm_to_inches,
     physical_to_row_count,
+    physical_to_section_rows,
     physical_to_stitch_count,
     row_count_to_physical,
     stitch_count_to_physical,
@@ -107,3 +108,44 @@ class TestDifferentGauges:
         bulky = Gauge(stitches_per_inch=3.0, rows_per_inch=4.0)
         assert physical_to_stitch_count(25.4, bulky) == pytest.approx(3.0)
         assert physical_to_row_count(25.4, bulky) == pytest.approx(4.0)
+
+
+class TestNegativeDimensions:
+    """Conversion functions are pure math — negative inputs produce negative outputs."""
+
+    def test_negative_stitch_count(self, worsted_gauge):
+        assert physical_to_stitch_count(-25.4, worsted_gauge) == pytest.approx(-5.0)
+
+    def test_negative_row_count(self, worsted_gauge):
+        assert physical_to_row_count(-25.4, worsted_gauge) == pytest.approx(-7.0)
+
+    def test_negative_round_trip(self, worsted_gauge):
+        raw = physical_to_stitch_count(-127.0, worsted_gauge)
+        back = stitch_count_to_physical(raw, worsted_gauge)
+        assert back == pytest.approx(-127.0)
+
+
+class TestPhysicalToSectionRows:
+    def test_exact_integer(self, worsted_gauge):
+        """25.4mm (1") at 7 rows/inch → exactly 7 rows."""
+        assert physical_to_section_rows(25.4, worsted_gauge) == 7
+
+    def test_rounds_to_nearest(self, worsted_gauge):
+        """254mm (10") at 7 rows/inch → 70.0 rows exactly."""
+        assert physical_to_section_rows(254.0, worsted_gauge) == 70
+
+    def test_rounds_up_from_half(self):
+        """Banker's rounding: 0.5 rounds to nearest even (Python round behaviour)."""
+        # 3 rows/inch, 2 inches = 6.0 (exact). Slightly more → 6 or 7 depending on rounding.
+        gauge = Gauge(stitches_per_inch=5.0, rows_per_inch=3.0)
+        # 55mm → 55/25.4 * 3 ≈ 6.496 → rounds to 6
+        assert physical_to_section_rows(55.0, gauge) == 6
+        # 57mm → 57/25.4 * 3 ≈ 6.732 → rounds to 7
+        assert physical_to_section_rows(57.0, gauge) == 7
+
+    def test_returns_int(self, worsted_gauge):
+        result = physical_to_section_rows(100.0, worsted_gauge)
+        assert isinstance(result, int)
+
+    def test_zero(self, worsted_gauge):
+        assert physical_to_section_rows(0.0, worsted_gauge) == 0

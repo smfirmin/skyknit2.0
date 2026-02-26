@@ -13,13 +13,21 @@ row 3 times").
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
+
+
+class ShapingAction(str, Enum):
+    """Direction of a shaping operation."""
+
+    INCREASE = "increase"
+    DECREASE = "decrease"
 
 
 @dataclass(frozen=True)
 class ShapingInterval:
     """A single shaping instruction: perform action every N rows, repeated M times."""
 
-    action: str  # "increase" or "decrease"
+    action: ShapingAction
     every_n_rows: int
     times: int
     stitches_per_action: int
@@ -54,7 +62,7 @@ def calculate_shaping_intervals(
     if stitches_per_action < 1:
         raise ValueError(f"stitches_per_action must be >= 1, got {stitches_per_action}")
 
-    action = "increase" if stitch_delta > 0 else "decrease"
+    action = ShapingAction.INCREASE if stitch_delta > 0 else ShapingAction.DECREASE
     abs_delta = abs(stitch_delta)
 
     if abs_delta % stitches_per_action != 0:

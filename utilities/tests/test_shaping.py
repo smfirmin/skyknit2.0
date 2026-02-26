@@ -2,18 +2,33 @@
 
 import pytest
 
-from utilities.shaping import ShapingInterval, calculate_shaping_intervals
+from utilities.shaping import ShapingAction, ShapingInterval, calculate_shaping_intervals
+
+
+class TestShapingAction:
+    def test_values(self):
+        assert ShapingAction.INCREASE.value == "increase"
+        assert ShapingAction.DECREASE.value == "decrease"
+
+    def test_is_str(self):
+        """ShapingAction inherits from str for serialization compatibility."""
+        assert isinstance(ShapingAction.INCREASE, str)
+        assert isinstance(ShapingAction.DECREASE, str)
 
 
 class TestShapingInterval:
     def test_is_frozen(self):
-        si = ShapingInterval(action="decrease", every_n_rows=4, times=10, stitches_per_action=2)
+        si = ShapingInterval(
+            action=ShapingAction.DECREASE, every_n_rows=4, times=10, stitches_per_action=2
+        )
         with pytest.raises(AttributeError):
             si.times = 5  # type: ignore[misc]
 
     def test_fields(self):
-        si = ShapingInterval(action="increase", every_n_rows=3, times=5, stitches_per_action=2)
-        assert si.action == "increase"
+        si = ShapingInterval(
+            action=ShapingAction.INCREASE, every_n_rows=3, times=5, stitches_per_action=2
+        )
+        assert si.action == ShapingAction.INCREASE
         assert si.every_n_rows == 3
         assert si.times == 5
         assert si.stitches_per_action == 2
@@ -28,14 +43,14 @@ class TestCalculateShapingIntervals:
         result = calculate_shaping_intervals(-20, 40)
         assert len(result) == 1
         assert result[0] == ShapingInterval(
-            "decrease", every_n_rows=4, times=10, stitches_per_action=2
+            ShapingAction.DECREASE, every_n_rows=4, times=10, stitches_per_action=2
         )
 
     def test_even_increase(self):
         """Delta +20, depth 40, 2 sts/action → 10 actions every 4 rows."""
         result = calculate_shaping_intervals(20, 40)
         assert len(result) == 1
-        assert result[0].action == "increase"
+        assert result[0].action == ShapingAction.INCREASE
         assert result[0].every_n_rows == 4
         assert result[0].times == 10
 
@@ -45,10 +60,10 @@ class TestCalculateShapingIntervals:
         result = calculate_shaping_intervals(-20, 43)
         assert len(result) == 2
         assert result[0] == ShapingInterval(
-            "decrease", every_n_rows=4, times=7, stitches_per_action=2
+            ShapingAction.DECREASE, every_n_rows=4, times=7, stitches_per_action=2
         )
         assert result[1] == ShapingInterval(
-            "decrease", every_n_rows=5, times=3, stitches_per_action=2
+            ShapingAction.DECREASE, every_n_rows=5, times=3, stitches_per_action=2
         )
 
     def test_uneven_invariant_total_delta(self):
@@ -97,12 +112,12 @@ class TestCalculateShapingIntervals:
     def test_positive_delta_labels_increase(self):
         result = calculate_shaping_intervals(10, 20)
         for interval in result:
-            assert interval.action == "increase"
+            assert interval.action is ShapingAction.INCREASE
 
     def test_negative_delta_labels_decrease(self):
         result = calculate_shaping_intervals(-10, 20)
         for interval in result:
-            assert interval.action == "decrease"
+            assert interval.action is ShapingAction.DECREASE
 
     def test_rejects_zero_section_depth(self):
         with pytest.raises(ValueError, match="section_depth_rows must be >= 1"):
@@ -125,6 +140,19 @@ class TestCalculateShapingIntervals:
         """Delta not divisible by stitches_per_action."""
         with pytest.raises(ValueError, match="must be divisible by"):
             calculate_shaping_intervals(-7, 40, stitches_per_action=2)
+
+    def test_rejects_delta_smaller_than_stitches_per_action(self):
+        """Delta of 1 with stitches_per_action=2 fails divisibility."""
+        with pytest.raises(ValueError, match="must be divisible by"):
+            calculate_shaping_intervals(-1, 10, stitches_per_action=2)
+
+    def test_stitches_per_action_equals_delta(self):
+        """Delta equals stitches_per_action → single action."""
+        result = calculate_shaping_intervals(-4, 10, stitches_per_action=4)
+        assert len(result) == 1
+        assert result[0].times == 1
+        assert result[0].every_n_rows == 10
+        assert result[0].stitches_per_action == 4
 
     @pytest.mark.parametrize(
         "delta, depth",

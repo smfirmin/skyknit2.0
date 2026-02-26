@@ -50,10 +50,6 @@ def find_valid_counts(
     low = raw_target - tolerance_stitches
     high = raw_target + tolerance_stitches
 
-    # Find the first multiple of effective_repeat >= low
-    if effective_repeat == 0:
-        return []
-
     first = math.ceil(low / effective_repeat) * effective_repeat
     if first < 1:
         first = effective_repeat  # stitch counts must be positive
@@ -117,5 +113,6 @@ def select_stitch_count_from_physical(
         The selected stitch count, or None if no valid count exists.
     """
     raw_target = physical_to_stitch_count(dimension_mm, gauge)
+    # Tolerance is a length delta — same linear conversion as a dimension
     tolerance_stitches = physical_to_stitch_count(tolerance_mm, gauge)
     return select_stitch_count(raw_target, tolerance_stitches, stitch_repeat, hard_constraints)

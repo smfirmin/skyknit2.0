@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from enum import Enum
 
+from .conversion import MM_PER_INCH
 from .types import Gauge
 
 _EASE_MIN: float = 0.75
@@ -29,7 +30,7 @@ class PrecisionLevel(float, Enum):
 
 def gauge_base_mm(gauge: Gauge) -> float:
     """One stitch-width in mm at the given gauge."""
-    return 25.4 / gauge.stitches_per_inch
+    return MM_PER_INCH / gauge.stitches_per_inch
 
 
 def calculate_tolerance_mm(

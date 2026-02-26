@@ -40,11 +40,19 @@ class TestPublicAPI:
 
         assert PrecisionLevel.MEDIUM == 1.0
 
-    def test_shaping_interval_importable(self):
-        from utilities import ShapingInterval
+    def test_shaping_action_importable(self):
+        from utilities import ShapingAction
 
-        si = ShapingInterval("decrease", every_n_rows=4, times=10, stitches_per_action=2)
-        assert si.action == "decrease"
+        assert ShapingAction.INCREASE.value == "increase"
+        assert ShapingAction.DECREASE.value == "decrease"
+
+    def test_shaping_interval_importable(self):
+        from utilities import ShapingAction, ShapingInterval
+
+        si = ShapingInterval(
+            ShapingAction.DECREASE, every_n_rows=4, times=10, stitches_per_action=2
+        )
+        assert si.action is ShapingAction.DECREASE
 
     def test_conversion_functions_importable(self):
         from utilities import inches_to_mm, mm_to_inches
