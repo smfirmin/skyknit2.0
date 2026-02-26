@@ -2,7 +2,12 @@
 
 import pytest
 
-from utilities.repeats import find_valid_counts, select_stitch_count
+from utilities.repeats import (
+    find_valid_counts,
+    select_stitch_count,
+    select_stitch_count_from_physical,
+)
+from utilities.types import Gauge
 
 
 class TestFindValidCounts:
@@ -130,3 +135,39 @@ class TestSelectStitchCount:
     def test_single_valid_count(self):
         result = select_stitch_count(100.0, 1.0, 4)
         assert result == 100
+
+
+class TestSelectStitchCountFromPhysical:
+    """End-to-end pipeline: physical dimension → selected stitch count."""
+
+    @pytest.fixture()
+    def worsted_gauge(self):
+        return Gauge(stitches_per_inch=5.0, rows_per_inch=7.0)
+
+    def test_end_to_end_ten_inches(self, worsted_gauge):
+        """254mm (10") at 5 sts/inch → raw 50, repeat 4, tolerance 15.24mm (3 stitches).
+        Band [47, 53], multiples of 4: 48, 52. Both 2 away → tie → prefer 52."""
+        result = select_stitch_count_from_physical(254.0, worsted_gauge, 15.24, 4)
+        assert result == 52
+
+    def test_exact_match_at_gauge(self, worsted_gauge):
+        """203.2mm (8") at 5 sts/inch → raw 40, repeat 4, tolerance 5.08mm."""
+        result = select_stitch_count_from_physical(203.2, worsted_gauge, 5.08, 4)
+        assert result == 40  # 40 is exactly divisible by 4
+
+    def test_returns_none_when_unresolvable(self, worsted_gauge):
+        """Extremely tight tolerance with incompatible repeat."""
+        result = select_stitch_count_from_physical(256.54, worsted_gauge, 0.01, 4)
+        assert result is None
+
+    def test_with_hard_constraints(self, worsted_gauge):
+        """254mm, repeat 4, must be div by 3. LCM=12. Tolerance 15.24mm (3 stitches).
+        Band [47, 53], multiples of 12: 48. Only one valid count."""
+        result = select_stitch_count_from_physical(254.0, worsted_gauge, 15.24, 4, [3])
+        assert result == 48
+
+    def test_same_import_path(self):
+        """Verify both Fillers and Checker can use the identical function."""
+        from utilities.repeats import select_stitch_count_from_physical as fn
+
+        assert fn is select_stitch_count_from_physical

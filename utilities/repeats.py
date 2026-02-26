@@ -9,6 +9,9 @@ from __future__ import annotations
 
 import math
 
+from .conversion import physical_to_stitch_count
+from .types import Gauge
+
 
 def find_valid_counts(
     raw_target: float,
@@ -87,3 +90,32 @@ def select_stitch_count(
 
     # Sort by distance to target, then by count descending (prefer larger on tie)
     return min(valid, key=lambda c: (abs(c - raw_target), -c))
+
+
+def select_stitch_count_from_physical(
+    dimension_mm: float,
+    gauge: Gauge,
+    tolerance_mm: float,
+    stitch_repeat: int,
+    hard_constraints: list[int] | None = None,
+) -> int | None:
+    """
+    End-to-end pipeline: physical dimension (mm) to selected stitch count.
+
+    Converts physical dimensions and tolerance to stitch-domain values,
+    then delegates to select_stitch_count. This is the function used
+    identically by both Stitch Fillers and the Algebraic Checker.
+
+    Args:
+        dimension_mm: Physical dimension in millimeters.
+        gauge: Stitch and row density.
+        tolerance_mm: Physical tolerance in millimeters.
+        stitch_repeat: Pattern repeat divisor.
+        hard_constraints: Additional divisors the count must satisfy.
+
+    Returns:
+        The selected stitch count, or None if no valid count exists.
+    """
+    raw_target = physical_to_stitch_count(dimension_mm, gauge)
+    tolerance_stitches = physical_to_stitch_count(tolerance_mm, gauge)
+    return select_stitch_count(raw_target, tolerance_stitches, stitch_repeat, hard_constraints)
