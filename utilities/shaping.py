@@ -79,9 +79,6 @@ def calculate_shaping_intervals(
             f"(need at least 1 row per action)"
         )
 
-    if num_actions == 0:
-        return []
-
     # Distribute rows as evenly as possible across actions.
     # base_interval = floor(rows / actions), remainder gets spread as shorter intervals.
     base_interval = section_depth_rows // num_actions

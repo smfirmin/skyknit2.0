@@ -134,14 +134,23 @@ class TestPhysicalToSectionRows:
         """254mm (10") at 7 rows/inch → 70.0 rows exactly."""
         assert physical_to_section_rows(254.0, worsted_gauge) == 70
 
-    def test_rounds_up_from_half(self):
-        """Banker's rounding: 0.5 rounds to nearest even (Python round behaviour)."""
-        # 3 rows/inch, 2 inches = 6.0 (exact). Slightly more → 6 or 7 depending on rounding.
+    def test_rounds_fractional_values(self):
+        """Values below .5 round down, above .5 round up."""
         gauge = Gauge(stitches_per_inch=5.0, rows_per_inch=3.0)
         # 55mm → 55/25.4 * 3 ≈ 6.496 → rounds to 6
         assert physical_to_section_rows(55.0, gauge) == 6
         # 57mm → 57/25.4 * 3 ≈ 6.732 → rounds to 7
         assert physical_to_section_rows(57.0, gauge) == 7
+
+    def test_bankers_rounding_on_exact_half(self):
+        """Python round() uses banker's rounding: 0.5 rounds to nearest even."""
+        # Construct a gauge where the raw row count lands on exactly N.5:
+        # rows_per_inch=2, dimension=19.05mm → 19.05/25.4 * 2 = 1.5 → rounds to 2 (even)
+        gauge = Gauge(stitches_per_inch=5.0, rows_per_inch=2.0)
+        assert physical_to_section_rows(19.05, gauge) == 2  # 1.5 → 2 (nearest even)
+        # 38.1mm → 38.1/25.4 * 2 = 3.0 (exact, no rounding)
+        # 57.15mm → 57.15/25.4 * 2 = 4.5 → rounds to 4 (nearest even)
+        assert physical_to_section_rows(57.15, gauge) == 4  # 4.5 → 4 (nearest even)
 
     def test_returns_int(self, worsted_gauge):
         result = physical_to_section_rows(100.0, worsted_gauge)

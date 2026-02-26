@@ -10,6 +10,12 @@ from utilities.repeats import (
 from utilities.types import Gauge
 
 
+@pytest.fixture(scope="module")
+def worsted_gauge():
+    """Typical worsted-weight gauge: 5 sts/inch, 7 rows/inch."""
+    return Gauge(stitches_per_inch=5.0, rows_per_inch=7.0)
+
+
 class TestFindValidCounts:
     def test_simple_exact_match(self):
         """Target 100, tolerance 3, repeat 4 → 100 is divisible by 4."""
@@ -139,10 +145,6 @@ class TestSelectStitchCount:
 
 class TestSelectStitchCountFromPhysical:
     """End-to-end pipeline: physical dimension → selected stitch count."""
-
-    @pytest.fixture()
-    def worsted_gauge(self):
-        return Gauge(stitches_per_inch=5.0, rows_per_inch=7.0)
 
     def test_end_to_end_ten_inches(self, worsted_gauge):
         """254mm (10") at 5 sts/inch → raw 50, repeat 4, tolerance 15.24mm (3 stitches).
