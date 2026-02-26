@@ -62,3 +62,28 @@ def find_valid_counts(
         count += effective_repeat
 
     return result
+
+
+def select_stitch_count(
+    raw_target: float,
+    tolerance_stitches: float,
+    stitch_repeat: int,
+    hard_constraints: list[int] | None = None,
+) -> int | None:
+    """
+    Select the optimal stitch count from the valid counts within tolerance.
+
+    Picks the count closest to raw_target. On a tie (two counts equidistant
+    from target), prefers the larger count — a standard knitting convention
+    that favours slightly more ease over slightly less.
+
+    Returns:
+        The selected stitch count, or None if no valid count exists
+        (signalling that escalation is needed upstream).
+    """
+    valid = find_valid_counts(raw_target, tolerance_stitches, stitch_repeat, hard_constraints)
+    if not valid:
+        return None
+
+    # Sort by distance to target, then by count descending (prefer larger on tie)
+    return min(valid, key=lambda c: (abs(c - raw_target), -c))

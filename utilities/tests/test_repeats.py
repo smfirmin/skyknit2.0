@@ -2,7 +2,7 @@
 
 import pytest
 
-from utilities.repeats import find_valid_counts
+from utilities.repeats import find_valid_counts, select_stitch_count
 
 
 class TestFindValidCounts:
@@ -86,3 +86,47 @@ class TestFindValidCounts:
         result = find_valid_counts(2.0, 5.0, 3)
         # Range [-3, 7], multiples of 3 > 0: 3, 6
         assert result == [3, 6]
+
+
+class TestSelectStitchCount:
+    def test_selects_closest_to_target(self):
+        """Target 101, tolerance 5, repeat 4 → valid [100, 104], closest is 100."""
+        result = select_stitch_count(101.0, 5.0, 4)
+        assert result == 100
+
+    def test_selects_exact_match(self):
+        """Target 100, tolerance 5, repeat 4 → valid [96, 100, 104], exact match 100."""
+        result = select_stitch_count(100.0, 5.0, 4)
+        assert result == 100
+
+    def test_tie_breaking_prefers_larger(self):
+        """Target 98, tolerance 5, repeat 4 → valid [96, 100], equidistant → picks 100."""
+        result = select_stitch_count(98.0, 5.0, 4)
+        assert result == 100
+
+    def test_returns_none_when_no_valid_counts(self):
+        """No valid counts → None (escalation signal)."""
+        result = select_stitch_count(101.0, 0.5, 4)
+        assert result is None
+
+    def test_tolerance_zero_exact_match(self):
+        result = select_stitch_count(100.0, 0.0, 4)
+        assert result == 100
+
+    def test_tolerance_zero_no_match(self):
+        result = select_stitch_count(101.0, 0.0, 4)
+        assert result is None
+
+    def test_with_hard_constraints(self):
+        """Target 100, tolerance 10, repeat 4, must be div by 6. LCM=12. Valid: [96, 108]."""
+        result = select_stitch_count(100.0, 10.0, 4, hard_constraints=[6])
+        assert result == 96  # 96 is closer to 100 than 108
+
+    def test_selects_closer_above_target(self):
+        """Target 99, tolerance 5, repeat 4 → valid [96, 100, 104], 100 is closest."""
+        result = select_stitch_count(99.0, 5.0, 4)
+        assert result == 100
+
+    def test_single_valid_count(self):
+        result = select_stitch_count(100.0, 1.0, 4)
+        assert result == 100
