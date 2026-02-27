@@ -388,3 +388,211 @@ class TestCrossReferenceValidation:
         )
         with pytest.raises(ValueError):
             TopologyRegistry(data_dir=data_dir)
+
+
+# ── YAML loading error paths ───────────────────────────────────────────────────
+
+
+class TestYAMLLoadingErrors:
+    def test_missing_edge_types_file_raises(self, tmp_path):
+        data_dir = tmp_path / "data"
+        shutil.copytree(_DATA_DIR, data_dir)
+        (data_dir / "edge_types.yaml").unlink()
+        with pytest.raises(FileNotFoundError):
+            TopologyRegistry(data_dir=data_dir)
+
+    def test_missing_join_types_file_raises(self, tmp_path):
+        data_dir = tmp_path / "data"
+        shutil.copytree(_DATA_DIR, data_dir)
+        (data_dir / "join_types.yaml").unlink()
+        with pytest.raises(FileNotFoundError):
+            TopologyRegistry(data_dir=data_dir)
+
+    def test_missing_compatibility_file_raises(self, tmp_path):
+        data_dir = tmp_path / "data"
+        shutil.copytree(_DATA_DIR, data_dir)
+        (data_dir / "compatibility.yaml").unlink()
+        with pytest.raises(FileNotFoundError):
+            TopologyRegistry(data_dir=data_dir)
+
+    def test_missing_defaults_file_raises(self, tmp_path):
+        data_dir = tmp_path / "data"
+        shutil.copytree(_DATA_DIR, data_dir)
+        (data_dir / "defaults.yaml").unlink()
+        with pytest.raises(FileNotFoundError):
+            TopologyRegistry(data_dir=data_dir)
+
+    def test_missing_arithmetic_file_raises(self, tmp_path):
+        data_dir = tmp_path / "data"
+        shutil.copytree(_DATA_DIR, data_dir)
+        (data_dir / "arithmetic_implications.yaml").unlink()
+        with pytest.raises(FileNotFoundError):
+            TopologyRegistry(data_dir=data_dir)
+
+    def test_missing_writer_dispatch_file_raises(self, tmp_path):
+        data_dir = tmp_path / "data"
+        shutil.copytree(_DATA_DIR, data_dir)
+        (data_dir / "writer_dispatch.yaml").unlink()
+        with pytest.raises(FileNotFoundError):
+            TopologyRegistry(data_dir=data_dir)
+
+    def test_malformed_yaml_raises_value_error(self, tmp_path):
+        data_dir = tmp_path / "data"
+        shutil.copytree(_DATA_DIR, data_dir)
+        (data_dir / "edge_types.yaml").write_text("entries: [\n  - id: BROKEN\n    bad: {unclosed")
+        with pytest.raises(ValueError, match="Failed to parse"):
+            TopologyRegistry(data_dir=data_dir)
+
+    def test_invalid_edge_type_enum_in_yaml_raises(self, tmp_path):
+        """An unrecognised enum value in YAML must raise at load time."""
+        data_dir = tmp_path / "data"
+        shutil.copytree(_DATA_DIR, data_dir)
+
+        bad = data_dir / "edge_types.yaml"
+        bad.write_text(
+            bad.read_text()
+            + (
+                "\n  - id: TOTALLY_INVALID\n"
+                "    description: bad entry\n"
+                "    has_live_stitches: false\n"
+                "    is_terminal: false\n"
+                "    phase_constraint: any\n"
+            )
+        )
+        with pytest.raises(ValueError):
+            TopologyRegistry(data_dir=data_dir)
+
+    def test_invalid_join_type_enum_in_arithmetic_raises(self, tmp_path):
+        data_dir = tmp_path / "data"
+        shutil.copytree(_DATA_DIR, data_dir)
+
+        bad = data_dir / "arithmetic_implications.yaml"
+        bad.write_text(
+            bad.read_text() + "\n  - join_type: NONEXISTENT\n    implication: ONE_TO_ONE\n"
+        )
+        with pytest.raises(ValueError):
+            TopologyRegistry(data_dir=data_dir)
+
+
+# ── Join type completeness validation ─────────────────────────────────────────
+
+
+class TestJoinTypeCompletenessValidation:
+    def test_missing_arithmetic_entry_raises(self, tmp_path):
+        """A join type with no arithmetic entry must fail cross-reference validation."""
+        data_dir = tmp_path / "data"
+        shutil.copytree(_DATA_DIR, data_dir)
+
+        # Rewrite arithmetic file with one join type missing
+        original = (data_dir / "arithmetic_implications.yaml").read_text()
+        lines = [line for line in original.splitlines(keepends=True) if "CONTINUATION" not in line]
+        (data_dir / "arithmetic_implications.yaml").write_text("".join(lines))
+        with pytest.raises(ValueError, match="arithmetic"):
+            TopologyRegistry(data_dir=data_dir)
+
+    def test_missing_writer_dispatch_entry_raises(self, tmp_path):
+        """A join type with no writer dispatch entry must fail cross-reference validation."""
+        data_dir = tmp_path / "data"
+        shutil.copytree(_DATA_DIR, data_dir)
+
+        original = (data_dir / "writer_dispatch.yaml").read_text()
+        lines = [line for line in original.splitlines(keepends=True) if "CONTINUATION" not in line]
+        (data_dir / "writer_dispatch.yaml").write_text("".join(lines))
+        with pytest.raises(ValueError, match="writer_dispatch"):
+            TopologyRegistry(data_dir=data_dir)
+
+
+# ── Condition function global invariant ───────────────────────────────────────
+
+
+class TestConditionFnInvariant:
+    def test_all_conditional_entries_have_condition_fn(self, registry):
+        """Every entry with result=CONDITIONAL must carry a non-empty condition_fn."""
+        for key, entry in registry.compatibility.items():
+            if entry.result == CompatibilityResult.CONDITIONAL:
+                assert entry.condition_fn is not None and len(entry.condition_fn) > 0, (
+                    f"CONDITIONAL entry {key} has no condition_fn"
+                )
+
+    def test_no_valid_entry_has_condition_fn(self, registry):
+        """VALID entries must never carry a condition_fn."""
+        for key, entry in registry.compatibility.items():
+            if entry.result == CompatibilityResult.VALID:
+                assert entry.condition_fn is None, (
+                    f"VALID entry {key} unexpectedly has condition_fn={entry.condition_fn!r}"
+                )
+
+    def test_no_invalid_entry_has_condition_fn(self, registry):
+        """INVALID entries must never carry a condition_fn."""
+        for key, entry in registry.compatibility.items():
+            if entry.result == CompatibilityResult.INVALID:
+                assert entry.condition_fn is None, (
+                    f"INVALID entry {key} unexpectedly has condition_fn={entry.condition_fn!r}"
+                )
+
+    def test_condition_fn_is_non_empty_string(self, registry):
+        """condition_fn values must be non-empty strings, not empty string placeholders."""
+        for key, entry in registry.compatibility.items():
+            if entry.condition_fn is not None:
+                assert isinstance(entry.condition_fn, str) and entry.condition_fn.strip(), (
+                    f"condition_fn for {key} is blank or not a string"
+                )
+
+
+# ── Cross-table consistency ────────────────────────────────────────────────────
+
+
+class TestCrossTableConsistency:
+    def test_all_defaults_keys_reference_valid_types(self, registry):
+        """Every key in the defaults table must use known EdgeType and JoinType values."""
+        for key in registry.defaults:
+            assert key.edge_type_a in registry.edge_types, (
+                f"defaults key {key}: edge_type_a not in edge_types"
+            )
+            assert key.edge_type_b in registry.edge_types, (
+                f"defaults key {key}: edge_type_b not in edge_types"
+            )
+            assert key.join_type in registry.join_types, (
+                f"defaults key {key}: join_type not in join_types"
+            )
+
+    def test_all_arithmetic_keys_are_known_join_types(self, registry):
+        for jt in registry.arithmetic:
+            assert jt in registry.join_types
+
+    def test_all_writer_dispatch_keys_are_known_join_types(self, registry):
+        for jt in registry.writer_dispatch:
+            assert jt in registry.join_types
+
+    def test_conditional_template_key_only_when_conditional_variant_exists(self, registry):
+        """A join type should only expose conditional_template_key if a CONDITIONAL
+        compatibility entry exists for that join type."""
+        join_types_with_conditional = {
+            key.join_type
+            for key, entry in registry.compatibility.items()
+            if entry.result == CompatibilityResult.CONDITIONAL
+        }
+        for jt, entry in registry.writer_dispatch.items():
+            if entry.conditional_template_key is not None:
+                assert jt in join_types_with_conditional, (
+                    f"{jt.value}: has conditional_template_key but no CONDITIONAL "
+                    "compatibility entry"
+                )
+
+    def test_registry_tables_are_mapping_proxies(self, registry):
+        """All public table attributes must be MappingProxyType (immutable)."""
+        from types import MappingProxyType
+
+        assert isinstance(registry.edge_types, MappingProxyType)
+        assert isinstance(registry.join_types, MappingProxyType)
+        assert isinstance(registry.compatibility, MappingProxyType)
+        assert isinstance(registry.defaults, MappingProxyType)
+        assert isinstance(registry.arithmetic, MappingProxyType)
+        assert isinstance(registry.writer_dispatch, MappingProxyType)
+
+    def test_registry_tables_are_not_directly_mutable(self, registry):
+        """MappingProxyType tables must reject direct key assignment."""
+        import pytest
+
+        with pytest.raises(TypeError):
+            registry.edge_types[EdgeType.OPEN] = None
