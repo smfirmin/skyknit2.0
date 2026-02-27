@@ -13,11 +13,12 @@ Skyknit 2.0 is an AI-powered knitting pattern generator for top-down sweater con
 uv sync --extra dev
 
 # Tests
-uv run pytest                          # run all tests (277 tests across 3 packages)
+uv run pytest                          # run all tests (377 tests across 4 packages)
 uv run pytest -v                       # verbose
 uv run pytest topology/tests/ -v       # topology package only
 uv run pytest utilities/tests/ -v      # utilities package only
 uv run pytest schemas/tests/ -v        # schemas package only
+uv run pytest checker/tests/ -v       # checker package only
 
 # Lint & format
 uv run ruff check .                    # lint
@@ -27,7 +28,7 @@ uv run ruff format --check .           # format check only
 
 # Type checking
 uv run mypy topology/                  # strict mode (CI target)
-uv run mypy utilities/ schemas/        # also type-annotated
+uv run mypy utilities/ schemas/ checker/  # also type-annotated
 ```
 
 ## CI
@@ -42,7 +43,7 @@ GitHub Actions runs three parallel jobs on every push and PR to main: **lint** (
 
 ## Architecture
 
-Three implemented packages, each with its own `tests/` subdirectory:
+Four implemented packages, each with its own `tests/` subdirectory:
 
 - **topology/** — Core package: edge/join type registry backed by YAML lookup tables
   - `types.py` — Enums (`EdgeType`, `JoinType`, `CompatibilityResult`, `ArithmeticImplication`, `RenderingMode`) and frozen dataclasses (`EdgeTypeEntry`, `JoinTypeEntry`, `CompatibilityEntry`, `ArithmeticEntry`, `WriterDispatchEntry`); also runtime objects `Edge` and `Join`
@@ -64,6 +65,14 @@ Three implemented packages, each with its own `tests/` subdirectory:
   - `constraint.py` — `StitchMotif`, `YarnSpec`, `ConstraintObject` (one per component from Fabric Module)
   - `ir.py` — `OpType` enum, `Operation`, `ComponentIR`; factory helpers `make_cast_on`, `make_work_even`, `make_bind_off`
   - `tests/` — 54 tests across 5 test files
+
+- **checker/** — Algebraic Checker: simulation VM for verifying pattern correctness
+  - `vm_state.py` — `VMState` dataclass: live stitch count, held stitches, row counter, current needle
+  - `operations.py` — `execute_op` dispatch: per-operation VM state transitions for all `OpType` values; `OperationError` exception
+  - `simulate.py` — `simulate_component` (intra-component IR simulation), `extract_edge_counts` (edge→stitch count mapping); `CheckerError`, `SimulationResult` frozen dataclasses
+  - `joins.py` — `validate_join`, `validate_all_joins` — inter-component join validation using topology registry arithmetic implications (ONE_TO_ONE, ADDITIVE, RATIO, STRUCTURAL)
+  - `checker.py` — `check_all` full pipeline: simulates all components, extracts edge counts, validates joins, classifies errors as filler-origin or geometric-origin; `CheckerResult` frozen dataclass
+  - `tests/` — 68 tests across 4 test files
 
 See `ARCHITECTURE.md` for full system design, pipeline, and module build order.
 
@@ -91,6 +100,9 @@ See `ARCHITECTURE.md` for full system design, pipeline, and module build order.
 ## Package Dependency Graph
 
 ```
+checker  ──depends on──▶  schemas (for ComponentIR, ShapeManifest, ConstraintObject)
+checker  ──depends on──▶  topology (for registry arithmetic lookups, Edge/Join types)
+checker  ──depends on──▶  utilities (for Gauge, unit conversion)
 schemas  ──depends on──▶  topology (for Edge, Join types)
 schemas  ──depends on──▶  utilities (for Gauge type)
 utilities  ──no upstream deps──▶  (pure computation)
