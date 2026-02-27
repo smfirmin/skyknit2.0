@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["topology*", "utilities*"]
+include = ["topology*", "utilities*", "schemas*"]
 
 [project]
 name = "skyknit"
@@ -22,7 +22,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["topology/tests", "utilities/tests"]
+testpaths = ["topology/tests", "utilities/tests", "schemas/tests"]
 
 [tool.ruff]
 line-length = 100
@@ -33,7 +33,7 @@ select = ["E", "W", "F", "I"]
 ignore = ["E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["topology", "utilities"]
+known-first-party = ["topology", "utilities", "schemas"]
 
 [tool.mypy]
 python_version = "3.14"
@@ -46,4 +46,8 @@ disallow_untyped_defs = false
 
 [[tool.mypy.overrides]]
 module = "utilities.tests.*"
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = "schemas.tests.*"
 disallow_untyped_defs = false
