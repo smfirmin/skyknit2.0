@@ -13,7 +13,7 @@ Skyknit 2.0 is an AI-powered knitting pattern generator for top-down sweater con
 uv sync --extra dev
 
 # Tests
-uv run pytest                          # run all tests (377 tests across 4 packages)
+uv run pytest                          # run all tests (394 tests across 4 packages)
 uv run pytest -v                       # verbose
 uv run pytest topology/tests/ -v       # topology package only
 uv run pytest utilities/tests/ -v      # utilities package only
@@ -72,7 +72,7 @@ Four implemented packages, each with its own `tests/` subdirectory:
   - `simulate.py` — `simulate_component` (intra-component IR simulation), `extract_edge_counts` (edge→stitch count mapping); `CheckerError`, `SimulationResult` frozen dataclasses
   - `joins.py` — `validate_join`, `validate_all_joins` — inter-component join validation using topology registry arithmetic implications (ONE_TO_ONE, ADDITIVE, RATIO, STRUCTURAL)
   - `checker.py` — `check_all` full pipeline: simulates all components, extracts edge counts, validates joins, classifies errors as filler-origin or geometric-origin; `CheckerResult` frozen dataclass
-  - `tests/` — 68 tests across 4 test files
+  - `tests/` — 85 tests across 4 test files
 
 See `ARCHITECTURE.md` for full system design, pipeline, and module build order.
 

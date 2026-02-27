@@ -3,6 +3,7 @@
 import pytest
 
 from checker.checker import CheckerResult, check_all
+from checker.simulate import ErrorOrigin
 from schemas.constraint import ConstraintObject, StitchMotif, YarnSpec
 from schemas.ir import ComponentIR, Operation, OpType, make_bind_off, make_cast_on, make_work_even
 from schemas.manifest import ComponentSpec, Handedness, ShapeManifest, ShapeType
@@ -181,7 +182,7 @@ class TestFillerOriginErrors:
 
         result = check_all(manifest, irs, {"body": constraint})
         assert result.passed is False
-        assert any(e.error_type == "filler_origin" for e in result.errors)
+        assert any(e.error_type == ErrorOrigin.FILLER_ORIGIN for e in result.errors)
 
     def test_missing_ir_for_component(self, constraint):
         """No IR provided for a manifest component."""
@@ -278,6 +279,121 @@ class TestJoinErrors:
         # SEAM join references selvedge edges, which are omitted from edge counts.
         # The join validation should report missing edge counts.
         assert result.passed is False
+
+
+class TestExtraIRWarning:
+    def test_extra_ir_not_in_manifest_flagged(self, constraint):
+        """IR for a component not in the manifest is flagged."""
+        manifest = ShapeManifest(
+            components=(
+                ComponentSpec(
+                    name="body",
+                    shape_type=ShapeType.RECTANGLE,
+                    dimensions={"width": 500.0, "height": 400.0},
+                    edges=(
+                        Edge(name="top", edge_type=EdgeType.CAST_ON),
+                        Edge(name="bottom", edge_type=EdgeType.BOUND_OFF),
+                    ),
+                    handedness=Handedness.NONE,
+                    instantiation_count=1,
+                ),
+            ),
+            joins=(),
+        )
+
+        irs = {
+            "body": ComponentIR(
+                component_name="body",
+                handedness=Handedness.NONE,
+                operations=(
+                    make_cast_on(80),
+                    make_work_even(row_count=40, stitch_count=80),
+                    make_bind_off(80),
+                ),
+                starting_stitch_count=80,
+                ending_stitch_count=0,
+            ),
+            "ghost": ComponentIR(
+                component_name="ghost",
+                handedness=Handedness.NONE,
+                operations=(make_cast_on(10), make_bind_off(10)),
+                starting_stitch_count=10,
+                ending_stitch_count=0,
+            ),
+        }
+
+        result = check_all(manifest, irs, {"body": constraint})
+        assert result.passed is False
+        assert any("unknown component 'ghost'" in e.message for e in result.errors)
+        assert any(e.error_type == ErrorOrigin.GEOMETRIC_ORIGIN for e in result.errors)
+
+
+class TestEmptyConstraints:
+    def test_joins_without_constraints_reports_error(self):
+        """Joins present but no constraints → cannot validate, should error."""
+        manifest = ShapeManifest(
+            components=(
+                ComponentSpec(
+                    name="body",
+                    shape_type=ShapeType.RECTANGLE,
+                    dimensions={"width": 500.0, "height": 400.0},
+                    edges=(
+                        Edge(name="top", edge_type=EdgeType.CAST_ON, join_ref="j1"),
+                        Edge(name="bottom", edge_type=EdgeType.BOUND_OFF),
+                    ),
+                    handedness=Handedness.NONE,
+                    instantiation_count=1,
+                ),
+                ComponentSpec(
+                    name="skirt",
+                    shape_type=ShapeType.RECTANGLE,
+                    dimensions={"width": 500.0, "height": 300.0},
+                    edges=(
+                        Edge(name="top", edge_type=EdgeType.CAST_ON, join_ref="j1"),
+                        Edge(name="bottom", edge_type=EdgeType.BOUND_OFF),
+                    ),
+                    handedness=Handedness.NONE,
+                    instantiation_count=1,
+                ),
+            ),
+            joins=(
+                Join(
+                    id="j1",
+                    join_type=JoinType.CONTINUATION,
+                    edge_a_ref="body.top",
+                    edge_b_ref="skirt.top",
+                ),
+            ),
+        )
+
+        irs = {
+            "body": ComponentIR(
+                component_name="body",
+                handedness=Handedness.NONE,
+                operations=(
+                    make_cast_on(80),
+                    make_work_even(row_count=40, stitch_count=80),
+                    make_bind_off(80),
+                ),
+                starting_stitch_count=80,
+                ending_stitch_count=0,
+            ),
+            "skirt": ComponentIR(
+                component_name="skirt",
+                handedness=Handedness.NONE,
+                operations=(
+                    make_cast_on(80),
+                    make_work_even(row_count=20, stitch_count=80),
+                    make_bind_off(80),
+                ),
+                starting_stitch_count=80,
+                ending_stitch_count=0,
+            ),
+        }
+
+        result = check_all(manifest, irs, {})
+        assert result.passed is False
+        assert any("no constraints provided" in e.message for e in result.errors)
 
 
 class TestCheckerResult:

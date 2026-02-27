@@ -2,8 +2,8 @@
 Virtual machine state for the Algebraic Checker.
 
 VMState tracks the live stitch count, held stitches, and row counter as the
-checker simulates a ComponentIR sequence. The state is mutable during
-simulation but validated against invariants (e.g. non-negative stitch counts).
+checker simulates a ComponentIR sequence. VMState is frozen — operation handlers
+return new instances rather than mutating state in place.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 
-@dataclass
+@dataclass(frozen=True)
 class VMState:
     """
     Simulation state for a single component's operation sequence.
@@ -31,6 +31,8 @@ class VMState:
     def __post_init__(self) -> None:
         if self.live_stitch_count < 0:
             raise ValueError(f"live_stitch_count cannot be negative, got {self.live_stitch_count}")
+        if self.row_counter < 0:
+            raise ValueError(f"row_counter cannot be negative, got {self.row_counter}")
         for label, count in self.held_stitches.items():
             if count < 0:
                 raise ValueError(f"held stitch count for '{label}' cannot be negative, got {count}")

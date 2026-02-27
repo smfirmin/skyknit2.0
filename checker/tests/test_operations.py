@@ -52,6 +52,17 @@ class TestCastOn:
         with pytest.raises(OperationError, match="CAST_ON count must be positive"):
             execute_op(state, op)
 
+    def test_rejects_cast_on_with_existing_live_stitches(self):
+        state = VMState(live_stitch_count=40)
+        op = Operation(
+            op_type=OpType.CAST_ON,
+            parameters={"count": 80},
+            row_count=None,
+            stitch_count_after=80,
+        )
+        with pytest.raises(OperationError, match="live stitches already on needles"):
+            execute_op(state, op)
+
 
 class TestWorkEven:
     def test_stitch_count_unchanged(self):
@@ -203,6 +214,17 @@ class TestBindOff:
         with pytest.raises(OperationError, match="exceeds live stitches"):
             execute_op(state, op)
 
+    def test_rejects_zero_count(self):
+        state = VMState(live_stitch_count=80)
+        op = Operation(
+            op_type=OpType.BIND_OFF,
+            parameters={"count": 0},
+            row_count=None,
+            stitch_count_after=80,
+        )
+        with pytest.raises(OperationError, match="BIND_OFF count must be positive"):
+            execute_op(state, op)
+
 
 class TestHold:
     def test_live_decreases_held_increases(self):
@@ -271,6 +293,33 @@ class TestSeparate:
         with pytest.raises(OperationError, match="does not match"):
             execute_op(state, op)
 
+    def test_rejects_none_active_group(self):
+        state = VMState(live_stitch_count=100)
+        op = Operation(
+            op_type=OpType.SEPARATE,
+            parameters={
+                "groups": {"front": 50, "back": 50},
+            },
+            row_count=None,
+            stitch_count_after=50,
+        )
+        with pytest.raises(OperationError, match="active_group"):
+            execute_op(state, op)
+
+    def test_rejects_nonexistent_active_group(self):
+        state = VMState(live_stitch_count=100)
+        op = Operation(
+            op_type=OpType.SEPARATE,
+            parameters={
+                "groups": {"front": 50, "back": 50},
+                "active_group": "left_sleeve",
+            },
+            row_count=None,
+            stitch_count_after=50,
+        )
+        with pytest.raises(OperationError, match="active_group"):
+            execute_op(state, op)
+
 
 class TestPickupStitches:
     def test_adds_stitches(self):
@@ -305,6 +354,64 @@ class TestPickupStitches:
             stitch_count_after=40,
         )
         with pytest.raises(OperationError, match="exceeds held stitches"):
+            execute_op(state, op)
+
+
+class TestTaper:
+    def test_decreases_stitches(self):
+        state = VMState(live_stitch_count=80)
+        op = Operation(
+            op_type=OpType.TAPER,
+            parameters={},
+            row_count=10,
+            stitch_count_after=40,
+        )
+        result = execute_op(state, op)
+        assert result.live_stitch_count == 40
+        assert result.row_counter == 10
+
+    def test_increases_stitches(self):
+        state = VMState(live_stitch_count=40)
+        op = Operation(
+            op_type=OpType.TAPER,
+            parameters={},
+            row_count=10,
+            stitch_count_after=80,
+        )
+        result = execute_op(state, op)
+        assert result.live_stitch_count == 80
+
+    def test_rejects_missing_row_count(self):
+        state = VMState(live_stitch_count=80)
+        op = Operation(
+            op_type=OpType.TAPER,
+            parameters={},
+            row_count=None,
+            stitch_count_after=40,
+        )
+        with pytest.raises(OperationError, match="TAPER requires positive row_count"):
+            execute_op(state, op)
+
+    def test_rejects_missing_stitch_count_after(self):
+        state = VMState(live_stitch_count=80)
+        op = Operation(
+            op_type=OpType.TAPER,
+            parameters={},
+            row_count=10,
+            stitch_count_after=None,
+        )
+        with pytest.raises(OperationError, match="TAPER requires stitch_count_after"):
+            execute_op(state, op)
+
+    def test_rejects_negative_stitch_count(self):
+        state = VMState(live_stitch_count=80)
+        op = Operation(
+            op_type=OpType.TAPER,
+            parameters={},
+            row_count=10,
+            stitch_count_after=-5,
+        )
+        with pytest.raises(OperationError, match="negative stitches"):
             execute_op(state, op)
 
 

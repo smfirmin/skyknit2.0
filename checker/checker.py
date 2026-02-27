@@ -14,8 +14,8 @@ from schemas.constraint import ConstraintObject
 from schemas.ir import ComponentIR
 from schemas.manifest import ShapeManifest
 
-from .joins import validate_all_joins
-from .simulate import CheckerError, extract_edge_counts, simulate_component
+from .joins import validate_join
+from .simulate import CheckerError, ErrorOrigin, extract_edge_counts, simulate_component
 
 
 @dataclass(frozen=True)
@@ -52,6 +52,19 @@ def check_all(
     """
     all_errors: list[CheckerError] = []
     all_edge_counts: dict[str, int] = {}
+    manifest_names = {comp.name for comp in manifest.components}
+
+    # Flag extra IRs not referenced by the manifest
+    for ir_name in irs:
+        if ir_name not in manifest_names:
+            all_errors.append(
+                CheckerError(
+                    component_name=ir_name,
+                    operation_index=-1,
+                    message=f"IR provided for unknown component '{ir_name}' (not in manifest)",
+                    error_type=ErrorOrigin.GEOMETRIC_ORIGIN,
+                )
+            )
 
     # Step 1 & 2: Simulate each component and extract edge counts
     for comp_spec in manifest.components:
@@ -62,7 +75,7 @@ def check_all(
                     component_name=comp_spec.name,
                     operation_index=-1,
                     message=f"No IR provided for component '{comp_spec.name}'",
-                    error_type="filler_origin",
+                    error_type=ErrorOrigin.FILLER_ORIGIN,
                 )
             )
             continue
@@ -77,17 +90,30 @@ def check_all(
 
     # Step 3: Validate inter-component joins
     if manifest.joins:
-        # Use the first available constraint for gauge/tolerance.
-        # In practice all components in a garment share the same gauge.
-        first_constraint = next(iter(constraints.values())) if constraints else None
-        if first_constraint is not None:
-            join_errors = validate_all_joins(
-                manifest.joins,
-                all_edge_counts,
-                tolerance_mm=first_constraint.physical_tolerance_mm,
-                gauge=first_constraint.gauge,
+        if not constraints:
+            all_errors.append(
+                CheckerError(
+                    component_name="",
+                    operation_index=-1,
+                    message="Cannot validate joins: no constraints provided (need gauge/tolerance)",
+                    error_type=ErrorOrigin.GEOMETRIC_ORIGIN,
+                )
             )
-            all_errors.extend(join_errors)
+        else:
+            # Resolve gauge/tolerance per join from the upstream component's constraint.
+            # Falls back to the first available constraint if no specific one is found.
+            fallback_constraint = next(iter(constraints.values()))
+            for join in manifest.joins:
+                comp_name = join.edge_a_ref.split(".")[0]
+                join_constraint = constraints.get(comp_name, fallback_constraint)
+                error = validate_join(
+                    join,
+                    all_edge_counts,
+                    tolerance_mm=join_constraint.physical_tolerance_mm,
+                    gauge=join_constraint.gauge,
+                )
+                if error is not None:
+                    all_errors.append(error)
 
     return CheckerResult(
         passed=len(all_errors) == 0,

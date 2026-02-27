@@ -39,6 +39,10 @@ def _exec_cast_on(state: VMState, op: Operation) -> VMState:
     count = op.parameters.get("count", 0)
     if count <= 0:
         raise OperationError(f"CAST_ON count must be positive, got {count}")
+    if state.live_stitch_count > 0:
+        raise OperationError(
+            f"CAST_ON with {state.live_stitch_count} live stitches already on needles"
+        )
     return VMState(
         live_stitch_count=count,
         held_stitches=dict(state.held_stitches),
@@ -105,6 +109,8 @@ def _exec_decrease_section(state: VMState, op: Operation) -> VMState:
 
 def _exec_bind_off(state: VMState, op: Operation) -> VMState:
     count = op.parameters.get("count", state.live_stitch_count)
+    if count <= 0:
+        raise OperationError(f"BIND_OFF count must be positive, got {count}")
     if count > state.live_stitch_count:
         raise OperationError(
             f"BIND_OFF count ({count}) exceeds live stitches ({state.live_stitch_count})"

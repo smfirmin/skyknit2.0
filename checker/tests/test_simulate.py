@@ -4,6 +4,7 @@ import pytest
 
 from checker.simulate import (
     CheckerError,
+    ErrorOrigin,
     extract_edge_counts,
     simulate_component,
 )
@@ -108,7 +109,7 @@ class TestSimulateComponent:
             ending_stitch_count=80,  # should be 0
         )
         result = simulate_component(ir)
-        assert all(e.error_type == "filler_origin" for e in result.errors)
+        assert all(e.error_type == ErrorOrigin.FILLER_ORIGIN for e in result.errors)
 
     def test_simulation_result_is_frozen(self):
         result = simulate_component(self._simple_ir())
@@ -120,10 +121,32 @@ class TestSimulateComponent:
             component_name="body",
             operation_index=0,
             message="test",
-            error_type="filler_origin",
+            error_type=ErrorOrigin.FILLER_ORIGIN,
         )
         with pytest.raises(Exception):
             error.message = "changed"  # type: ignore[misc]
+
+    def test_pickup_stitches_as_valid_first_op(self):
+        """PICKUP_STITCHES is a valid way to start a component."""
+        ir = ComponentIR(
+            component_name="neckband",
+            handedness=Handedness.NONE,
+            operations=(
+                Operation(
+                    op_type=OpType.PICKUP_STITCHES,
+                    parameters={"count": 60},
+                    row_count=None,
+                    stitch_count_after=60,
+                ),
+                make_work_even(row_count=10, stitch_count=60),
+                make_bind_off(60),
+            ),
+            starting_stitch_count=60,
+            ending_stitch_count=0,
+        )
+        result = simulate_component(ir)
+        assert result.passed is True
+        assert len(result.errors) == 0
 
     def test_increase_decrease_sequence(self):
         """CAST_ON -> INCREASE -> DECREASE -> BIND_OFF."""

@@ -10,7 +10,13 @@ join topology) to route corrections to the right upstream module.
 from .checker import CheckerResult, check_all
 from .joins import validate_all_joins, validate_join
 from .operations import OperationError, execute_op
-from .simulate import CheckerError, SimulationResult, extract_edge_counts, simulate_component
+from .simulate import (
+    CheckerError,
+    ErrorOrigin,
+    SimulationResult,
+    extract_edge_counts,
+    simulate_component,
+)
 from .vm_state import VMState
 
 __all__ = [
@@ -21,6 +27,7 @@ __all__ = [
     "simulate_component",
     "SimulationResult",
     "CheckerError",
+    "ErrorOrigin",
     "extract_edge_counts",
     # Operations
     "execute_op",

@@ -35,9 +35,25 @@ class TestVMStateValidation:
         with pytest.raises(ValueError, match="held stitch count.*cannot be negative"):
             VMState(held_stitches={"arm": -5})
 
+    def test_rejects_negative_row_counter(self):
+        with pytest.raises(ValueError, match="row_counter cannot be negative"):
+            VMState(row_counter=-1)
+
     def test_zero_live_stitches_allowed(self):
         state = VMState(live_stitch_count=0)
         assert state.live_stitch_count == 0
+
+
+class TestVMStateFrozen:
+    def test_is_frozen(self):
+        state = VMState(live_stitch_count=80)
+        with pytest.raises(Exception):
+            state.live_stitch_count = 100  # type: ignore[misc]
+
+    def test_row_counter_frozen(self):
+        state = VMState(row_counter=10)
+        with pytest.raises(Exception):
+            state.row_counter = 20  # type: ignore[misc]
 
 
 class TestVMStateHeldStitches:
@@ -48,7 +64,6 @@ class TestVMStateHeldStitches:
         assert state.held_stitches["right_sleeve"] == 30
 
     def test_held_stitches_tracked_by_label(self):
-        state = VMState()
-        state.held_stitches["front"] = 40
+        state = VMState(held_stitches={"front": 40})
         assert "front" in state.held_stitches
         assert state.held_stitches["front"] == 40

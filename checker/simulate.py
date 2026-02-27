@@ -11,12 +11,21 @@ count at its corresponding point in the IR execution.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 
 from schemas.ir import ComponentIR, OpType
 from schemas.manifest import ComponentSpec
+from topology.types import EdgeType
 
 from .operations import OperationError, execute_op
 from .vm_state import VMState
+
+
+class ErrorOrigin(str, Enum):
+    """Classification of checker errors for upstream routing."""
+
+    FILLER_ORIGIN = "filler_origin"
+    GEOMETRIC_ORIGIN = "geometric_origin"
 
 
 @dataclass(frozen=True)
@@ -28,13 +37,13 @@ class CheckerError:
         component_name: Which component the error belongs to.
         operation_index: Index of the offending operation (-1 for non-op errors).
         message: Human-readable description of the error.
-        error_type: 'filler_origin' (bad stitch counts) or 'geometric_origin' (bad joins).
+        error_type: Classification for upstream routing.
     """
 
     component_name: str
     operation_index: int
     message: str
-    error_type: str
+    error_type: ErrorOrigin
 
 
 @dataclass(frozen=True)
@@ -71,7 +80,7 @@ def simulate_component(ir: ComponentIR) -> SimulationResult:
                 component_name=ir.component_name,
                 operation_index=-1,
                 message="ComponentIR has no operations",
-                error_type="filler_origin",
+                error_type=ErrorOrigin.FILLER_ORIGIN,
             )
         )
         return SimulationResult(passed=False, final_state=state, errors=tuple(errors))
@@ -89,7 +98,7 @@ def simulate_component(ir: ComponentIR) -> SimulationResult:
                         f"CAST_ON count ({cast_on_count}) does not match "
                         f"declared starting_stitch_count ({ir.starting_stitch_count})"
                     ),
-                    error_type="filler_origin",
+                    error_type=ErrorOrigin.FILLER_ORIGIN,
                 )
             )
     elif first_op.op_type == OpType.PICKUP_STITCHES:
@@ -104,7 +113,7 @@ def simulate_component(ir: ComponentIR) -> SimulationResult:
                     f"First operation must be CAST_ON or PICKUP_STITCHES, "
                     f"got {first_op.op_type.value}"
                 ),
-                error_type="filler_origin",
+                error_type=ErrorOrigin.FILLER_ORIGIN,
             )
         )
 
@@ -118,7 +127,7 @@ def simulate_component(ir: ComponentIR) -> SimulationResult:
                     component_name=ir.component_name,
                     operation_index=i,
                     message=str(exc),
-                    error_type="filler_origin",
+                    error_type=ErrorOrigin.FILLER_ORIGIN,
                 )
             )
             return SimulationResult(passed=False, final_state=state, errors=tuple(errors))
@@ -133,7 +142,7 @@ def simulate_component(ir: ComponentIR) -> SimulationResult:
                     f"Final live stitch count ({state.live_stitch_count}) does not match "
                     f"declared ending_stitch_count ({ir.ending_stitch_count})"
                 ),
-                error_type="filler_origin",
+                error_type=ErrorOrigin.FILLER_ORIGIN,
             )
         )
 
@@ -156,8 +165,6 @@ def extract_edge_counts(ir: ComponentIR, component_spec: ComponentSpec) -> dict[
 
     The returned dict is keyed by ``"component_name.edge_name"``.
     """
-    from topology.types import EdgeType
-
     edge_counts: dict[str, int] = {}
 
     for edge in component_spec.edges:

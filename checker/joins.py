@@ -14,7 +14,7 @@ from topology.types import ArithmeticImplication, Join
 from utilities.conversion import physical_to_stitch_count
 from utilities.types import Gauge
 
-from .simulate import CheckerError
+from .simulate import CheckerError, ErrorOrigin
 
 
 def validate_join(
@@ -43,14 +43,14 @@ def validate_join(
             component_name=join.edge_a_ref.split(".")[0],
             operation_index=-1,
             message=f"Missing edge count for {join.edge_a_ref} in join {join.id}",
-            error_type="geometric_origin",
+            error_type=ErrorOrigin.GEOMETRIC_ORIGIN,
         )
     if edge_b_count is None:
         return CheckerError(
             component_name=join.edge_b_ref.split(".")[0],
             operation_index=-1,
             message=f"Missing edge count for {join.edge_b_ref} in join {join.id}",
-            error_type="geometric_origin",
+            error_type=ErrorOrigin.GEOMETRIC_ORIGIN,
         )
 
     tolerance_stitches = physical_to_stitch_count(tolerance_mm, gauge)
@@ -68,7 +68,7 @@ def validate_join(
             component_name=join.edge_a_ref.split(".")[0],
             operation_index=-1,
             message=f"Unknown arithmetic implication {implication} for join {join.id}",
-            error_type="geometric_origin",
+            error_type=ErrorOrigin.GEOMETRIC_ORIGIN,
         )
 
 
@@ -88,7 +88,7 @@ def _validate_one_to_one(
                 f"{join.edge_a_ref}={edge_a_count}, {join.edge_b_ref}={edge_b_count} "
                 f"(tolerance: {tolerance_stitches:.1f} stitches)"
             ),
-            error_type="filler_origin",
+            error_type=ErrorOrigin.FILLER_ORIGIN,
         )
     return None
 
@@ -111,7 +111,7 @@ def _validate_additive(
                 f"({join.edge_a_ref}={edge_a_count} + cast_on_count={cast_on_count}), "
                 f"got {edge_b_count} (tolerance: {tolerance_stitches:.1f} stitches)"
             ),
-            error_type="filler_origin",
+            error_type=ErrorOrigin.FILLER_ORIGIN,
         )
     return None
 
@@ -134,7 +134,7 @@ def _validate_ratio(
                 f"({join.edge_a_ref}={edge_a_count} * ratio={pickup_ratio}), "
                 f"got {edge_b_count} (tolerance: {tolerance_stitches:.1f} stitches)"
             ),
-            error_type="filler_origin",
+            error_type=ErrorOrigin.FILLER_ORIGIN,
         )
     return None
 
@@ -155,7 +155,7 @@ def _validate_structural(
                 f"{join.edge_a_ref}={edge_a_count}, {join.edge_b_ref}={edge_b_count} "
                 f"(tolerance: {tolerance_stitches:.1f} stitches)"
             ),
-            error_type="filler_origin",
+            error_type=ErrorOrigin.FILLER_ORIGIN,
         )
     return None
 

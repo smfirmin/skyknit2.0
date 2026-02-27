@@ -130,6 +130,33 @@ class TestStructural:
         assert "STRUCTURAL" in result.message
 
 
+class TestHeldStitch:
+    """HELD_STITCH uses ONE_TO_ONE arithmetic — same as CONTINUATION."""
+
+    def test_matching_counts_pass(self, gauge):
+        join = Join(
+            id="j5",
+            join_type=JoinType.HELD_STITCH,
+            edge_a_ref="yoke.sleeve_hold",
+            edge_b_ref="sleeve.top",
+        )
+        edge_counts = {"yoke.sleeve_hold": 40, "sleeve.top": 40}
+        result = validate_join(join, edge_counts, tolerance_mm=5.08, gauge=gauge)
+        assert result is None
+
+    def test_mismatched_counts_fail(self, gauge):
+        join = Join(
+            id="j5",
+            join_type=JoinType.HELD_STITCH,
+            edge_a_ref="yoke.sleeve_hold",
+            edge_b_ref="sleeve.top",
+        )
+        edge_counts = {"yoke.sleeve_hold": 40, "sleeve.top": 60}
+        result = validate_join(join, edge_counts, tolerance_mm=5.08, gauge=gauge)
+        assert result is not None
+        assert "ONE_TO_ONE" in result.message
+
+
 class TestMissingEdgeCounts:
     def test_missing_edge_a(self, gauge):
         join = Join(
