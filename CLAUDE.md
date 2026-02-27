@@ -15,7 +15,9 @@ uv sync --extra dev
 # Tests
 uv run pytest                          # run all tests
 uv run pytest -v                       # verbose
-uv run pytest topology/tests/ -v       # specific directory
+uv run pytest topology/tests/ -v       # specific package
+uv run pytest utilities/tests/ -v      # specific package
+uv run pytest schemas/tests/ -v        # specific package
 
 # Lint & format
 uv run ruff check .                    # lint
@@ -24,12 +26,12 @@ uv run ruff format .                   # format
 uv run ruff format --check .           # format check only
 
 # Type checking
-uv run mypy topology/                  # strict mode
+uv run mypy topology/ utilities/ schemas/  # strict mode, all packages
 ```
 
 ## CI
 
-GitHub Actions runs three parallel jobs on every push and PR to main: **lint** (`ruff check` + `ruff format --check`), **typecheck** (`mypy topology/`), and **test** (`pytest -v`). All three must pass before merging.
+GitHub Actions runs three parallel jobs on every push and PR to main: **lint** (`ruff check` + `ruff format --check`), **typecheck** (`mypy topology/ utilities/ schemas/`), and **test** (`pytest -v`). All three must pass before merging.
 
 ## Dependencies
 
@@ -39,11 +41,28 @@ GitHub Actions runs three parallel jobs on every push and PR to main: **lint** (
 
 ## Architecture
 
+Three packages are complete (234 tests total, all passing):
+
 - **topology/** — Core package: edge/join type registry backed by YAML lookup tables
   - `types.py` — Enums (`EdgeType`, `JoinType`, `CompatibilityResult`, etc.) and frozen dataclasses
   - `registry.py` — `TopologyRegistry` singleton: loads, validates, and queries lookup tables
   - `data/*.yaml` — 6 versioned lookup tables (edge types, join types, compatibility, defaults, arithmetic, writer dispatch)
-  - `tests/` — Pytest suite (80+ assertions)
+  - `tests/` — Pytest suite
+
+- **utilities/** — Shared physical/knitting math (all values in mm, never stitch counts)
+  - `types.py` — `Gauge` frozen dataclass (stitches/rows per inch, fail-fast validation)
+  - `conversion.py` — Physical ↔ stitch/row count conversions
+  - `tolerance.py` — Tolerance calculation from gauge, ease multiplier, and precision level
+  - `repeats.py` — Pattern repeat arithmetic: find and select valid stitch counts (LCM of repeats)
+  - `shaping.py` — Shaping interval distribution (spreads increases/decreases evenly over rows)
+  - `tests/` — Pytest suite
+
+- **schemas/** — Data contracts between pipeline stages (all frozen dataclasses)
+  - `proportion.py` — `ProportionSpec`: dimensionless ratios + precision preference
+  - `constraint.py` — `ConstraintObject`, `StitchMotif`, `YarnSpec`
+  - `manifest.py` — `ShapeManifest`, `ComponentSpec` (references topology `Edge`/`Join` types)
+  - `ir.py` — `ComponentIR`, `Operation`, `OpType`: parameterized knitting intermediate representation
+  - `tests/` — Pytest suite
 
 See `ARCHITECTURE.md` for full system design and module build order.
 
@@ -60,11 +79,12 @@ See `ARCHITECTURE.md` for full system design and module build order.
 
 ## Test Conventions
 
-- Module-scoped `registry` fixture — registry loads once per test module for efficiency
-- Parametrized tests for edge/join compatibility combinations
-- `tmp_path` fixture for testing corrupted or missing YAML (isolated data directories)
-- Mutation-proof assertions: verify returned dicts are copies, not mutable views
-- Negative tests for known-invalid combinations and missing keys
+- Module-scoped fixtures for expensive setup (e.g., `registry` loads once per test module)
+- Parametrized tests for combinatorial cases (compatibility pairs, gauge values, shaping inputs)
+- `tmp_path` fixture for isolated data directories (corrupted or missing YAML)
+- Mutation-proof assertions: verify returned dicts/lists are copies, not mutable views
+- Negative tests for invalid inputs and known-bad combinations
+- `pytest.approx()` for all floating-point comparisons
 
 ## Adding New Data
 
