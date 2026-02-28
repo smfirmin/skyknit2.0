@@ -21,11 +21,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from checker.operations import execute_op
+from checker.vm_state import VMState
 from schemas.ir import ComponentIR, OpType
 from schemas.manifest import ComponentSpec
 from topology.types import EdgeType
-from checker.operations import execute_op
-from checker.vm_state import VMState
 
 
 @dataclass(frozen=True)

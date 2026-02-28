@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import pytest
 
+from checker import check_all
+from fillers.filler import DeterministicFiller, FillerInput, FillerOutput, StitchFiller
 from schemas.constraint import ConstraintObject, StitchMotif, YarnSpec
 from schemas.ir import OpType
 from schemas.manifest import ComponentSpec, Handedness, ShapeType
 from topology.types import Edge, EdgeType
 from utilities.types import Gauge
-from checker import check_all, CheckerResult
-from fillers.filler import DeterministicFiller, FillerInput, FillerOutput, StitchFiller
 
 # ── Shared fixtures ────────────────────────────────────────────────────────────
 

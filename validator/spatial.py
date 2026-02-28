@@ -15,8 +15,6 @@ the Algebraic Checker's stitch-count layer.)
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from schemas.manifest import ShapeManifest
 from validator.compatibility import ValidationError
 

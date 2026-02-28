@@ -17,12 +17,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
+from fillers.ir_builder import build_component_ir
+from fillers.resolver import resolve_stitch_counts
 from schemas.constraint import ConstraintObject
 from schemas.ir import ComponentIR
 from schemas.manifest import ComponentSpec, Handedness
 from topology.types import Join
-from fillers.ir_builder import build_component_ir, mirror_component_ir
-from fillers.resolver import resolve_stitch_counts
 
 
 @dataclass(frozen=True)

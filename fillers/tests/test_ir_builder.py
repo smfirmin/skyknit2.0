@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import pytest
 
+from fillers.ir_builder import build_component_ir, mirror_component_ir
 from schemas.constraint import ConstraintObject, StitchMotif, YarnSpec
 from schemas.ir import ComponentIR, OpType
 from schemas.manifest import ComponentSpec, Handedness, ShapeType
 from topology.types import Edge, EdgeType
 from utilities.types import Gauge
-from fillers.ir_builder import build_component_ir, mirror_component_ir
 
 # ── Shared fixtures ────────────────────────────────────────────────────────────
 

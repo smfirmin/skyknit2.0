@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from types import MappingProxyType
 
-from topology.types import Join, JoinType
 from fillers.join_params import read_join_parameters
+from topology.types import Join, JoinType
 
 
 def _join(join_type: JoinType, params: dict | None = None) -> Join:

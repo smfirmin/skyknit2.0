@@ -22,7 +22,7 @@ from dataclasses import dataclass
 
 from schemas.manifest import ShapeManifest
 from topology.registry import get_registry
-from topology.types import CompatibilityResult, Edge, EdgeType
+from topology.types import CompatibilityResult, Edge
 
 
 @dataclass(frozen=True)

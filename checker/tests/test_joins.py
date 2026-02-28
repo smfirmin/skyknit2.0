@@ -4,13 +4,10 @@ from __future__ import annotations
 
 from types import MappingProxyType
 
-import pytest
-
+from checker.joins import validate_all_joins, validate_join
+from checker.simulate import CheckerError
 from topology.types import Join, JoinType
 from utilities.types import Gauge
-from checker.joins import validate_join, validate_all_joins
-from checker.simulate import CheckerError
-
 
 # Gauge: 20 sts/inch, 28 rows/inch → 1 stitch ≈ 1.27mm
 GAUGE = Gauge(stitches_per_inch=20.0, rows_per_inch=28.0)

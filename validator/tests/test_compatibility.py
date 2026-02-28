@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-from types import MappingProxyType
-
 from schemas.manifest import ComponentSpec, Handedness, ShapeManifest, ShapeType
 from topology.types import Edge, EdgeType, Join, JoinType
 from validator.compatibility import ValidationError, validate_edge_join_compatibility
-
 
 # ── Fixture helpers ────────────────────────────────────────────────────────────
 

@@ -8,7 +8,7 @@ ValidationResult   -- aggregate result (passed: bool, errors: tuple[ValidationEr
 ValidationError    -- a single validation failure or warning (join_id, message, severity)
 """
 
-from validator.phase1 import ValidationResult, validate_phase1
 from validator.compatibility import ValidationError
+from validator.phase1 import ValidationResult, validate_phase1
 
 __all__ = ["validate_phase1", "ValidationResult", "ValidationError"]

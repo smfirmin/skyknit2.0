@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from checker.simulate import extract_edge_counts
 from schemas.ir import ComponentIR, Operation, OpType, make_bind_off, make_cast_on, make_work_even
 from schemas.manifest import ComponentSpec, Handedness, ShapeType
 from topology.types import Edge, EdgeType
-from checker.simulate import extract_edge_counts
 
 
 def _make_ir(operations: tuple, starting: int, ending: int, name: str = "body") -> ComponentIR:

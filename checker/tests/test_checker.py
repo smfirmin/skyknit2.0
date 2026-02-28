@@ -2,18 +2,14 @@
 
 from __future__ import annotations
 
-from types import MappingProxyType
-
 import pytest
 
+from checker.checker import CheckerResult, check_all
 from schemas.constraint import ConstraintObject, StitchMotif, YarnSpec
 from schemas.ir import ComponentIR, Operation, OpType, make_bind_off, make_cast_on, make_work_even
 from schemas.manifest import ComponentSpec, Handedness, ShapeManifest, ShapeType
 from topology.types import Edge, EdgeType, Join, JoinType
 from utilities.types import Gauge
-from checker.checker import CheckerResult, check_all
-from checker.simulate import CheckerError
-
 
 # ── Shared fixtures ────────────────────────────────────────────────────────────
 

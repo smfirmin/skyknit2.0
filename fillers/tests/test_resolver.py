@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from types import MappingProxyType
-
+from fillers.resolver import resolve_stitch_counts
 from schemas.constraint import ConstraintObject, StitchMotif, YarnSpec
 from schemas.manifest import ComponentSpec, Handedness, ShapeType
 from topology.types import Edge, EdgeType
 from utilities.types import Gauge
-from fillers.resolver import resolve_stitch_counts
 
 # ── Shared fixtures ────────────────────────────────────────────────────────────
 

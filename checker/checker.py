@@ -18,11 +18,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from checker.joins import validate_join
+from checker.simulate import CheckerError, extract_edge_counts, simulate_component
 from schemas.constraint import ConstraintObject
 from schemas.ir import ComponentIR
 from schemas.manifest import ShapeManifest
-from checker.joins import validate_join
-from checker.simulate import CheckerError, extract_edge_counts, simulate_component
 
 _DEFAULT_TOLERANCE_MM = 10.0
 

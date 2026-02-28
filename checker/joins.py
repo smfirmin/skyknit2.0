@@ -21,11 +21,11 @@ from __future__ import annotations
 from collections.abc import Iterable
 from math import floor
 
+from checker.simulate import CheckerError
 from topology.registry import get_registry
 from topology.types import ArithmeticImplication, Join
 from utilities.conversion import stitch_count_to_physical
 from utilities.types import Gauge
-from checker.simulate import CheckerError
 
 
 def validate_join(

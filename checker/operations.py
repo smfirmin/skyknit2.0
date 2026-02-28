@@ -12,8 +12,8 @@ converting it to a CheckerError with the appropriate operation index.
 
 from __future__ import annotations
 
-from schemas.ir import Operation, OpType
 from checker.vm_state import VMState
+from schemas.ir import Operation, OpType
 
 
 def execute_op(state: VMState, op: Operation) -> VMState:

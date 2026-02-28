@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from checker.simulate import CheckerError, SimulationResult, simulate_component
-from schemas.ir import ComponentIR, make_bind_off, make_cast_on, make_work_even, Operation, OpType
+from schemas.ir import ComponentIR, Operation, OpType, make_bind_off, make_cast_on, make_work_even
 from schemas.manifest import Handedness
 
 
