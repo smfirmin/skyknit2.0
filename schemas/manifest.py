@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from types import MappingProxyType
 
 from topology.types import Edge, Join
 
@@ -48,10 +49,18 @@ class ComponentSpec:
 
     name: str
     shape_type: ShapeType
-    dimensions: dict[str, float]
+    dimensions: MappingProxyType[str, float]
     edges: tuple[Edge, ...]
     handedness: Handedness
     instantiation_count: int
+
+    def __post_init__(self) -> None:
+        if isinstance(self.dimensions, dict):
+            object.__setattr__(self, "dimensions", MappingProxyType(self.dimensions))
+        if self.instantiation_count < 1:
+            raise ValueError(
+                f"instantiation_count must be >= 1, got {self.instantiation_count}"
+            )
 
 
 @dataclass(frozen=True)

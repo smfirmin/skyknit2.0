@@ -128,6 +128,26 @@ class TestComponentIR:
         ir = self._simple_stockinette_ir()
         assert isinstance(ir.operations, tuple)
 
+    def test_rejects_negative_starting_stitch_count(self):
+        with pytest.raises(ValueError, match="starting_stitch_count must be >= 0"):
+            ComponentIR(
+                component_name="body",
+                handedness=Handedness.NONE,
+                operations=(make_cast_on(80),),
+                starting_stitch_count=-1,
+                ending_stitch_count=0,
+            )
+
+    def test_rejects_negative_ending_stitch_count(self):
+        with pytest.raises(ValueError, match="ending_stitch_count must be >= 0"):
+            ComponentIR(
+                component_name="body",
+                handedness=Handedness.NONE,
+                operations=(make_cast_on(80),),
+                starting_stitch_count=80,
+                ending_stitch_count=-5,
+            )
+
 
 class TestConvenienceFactories:
     def test_make_cast_on(self):

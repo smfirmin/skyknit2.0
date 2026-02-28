@@ -24,6 +24,23 @@ class TestPrecisionPreference:
     def test_is_string_enum(self):
         assert isinstance(PrecisionPreference.HIGH, str)
 
+    def test_to_precision_level_returns_correct_level(self):
+        assert PrecisionPreference.HIGH.to_precision_level() is PrecisionLevel.HIGH
+        assert PrecisionPreference.MEDIUM.to_precision_level() is PrecisionLevel.MEDIUM
+        assert PrecisionPreference.LOW.to_precision_level() is PrecisionLevel.LOW
+
+    def test_to_precision_level_values_match(self):
+        """Numeric values carried by PrecisionLevel must match documented mapping."""
+        assert PrecisionPreference.HIGH.to_precision_level().value == 0.75
+        assert PrecisionPreference.MEDIUM.to_precision_level().value == 1.0
+        assert PrecisionPreference.LOW.to_precision_level().value == 1.5
+
+    def test_to_precision_level_covers_all_members(self):
+        """Every PrecisionPreference member must map to a PrecisionLevel without error."""
+        for pref in PrecisionPreference:
+            level = pref.to_precision_level()
+            assert isinstance(level, PrecisionLevel)
+
 
 class TestProportionSpec:
     def test_construction(self):

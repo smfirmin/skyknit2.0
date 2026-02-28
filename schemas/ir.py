@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from types import MappingProxyType
 from typing import Any
 
 from schemas.manifest import Handedness
@@ -46,10 +47,15 @@ class Operation:
     """
 
     op_type: OpType
-    parameters: dict[str, Any]
+    parameters: MappingProxyType[str, Any]
     row_count: int | None
     stitch_count_after: int | None
     notes: str = ""
+
+    def __post_init__(self) -> None:
+        # Accept plain dicts at construction sites and promote to MappingProxyType.
+        if isinstance(self.parameters, dict):
+            object.__setattr__(self, "parameters", MappingProxyType(self.parameters))
 
 
 @dataclass(frozen=True)
@@ -73,6 +79,16 @@ class ComponentIR:
     operations: tuple[Operation, ...]
     starting_stitch_count: int
     ending_stitch_count: int
+
+    def __post_init__(self) -> None:
+        if self.starting_stitch_count < 0:
+            raise ValueError(
+                f"starting_stitch_count must be >= 0, got {self.starting_stitch_count}"
+            )
+        if self.ending_stitch_count < 0:
+            raise ValueError(
+                f"ending_stitch_count must be >= 0, got {self.ending_stitch_count}"
+            )
 
 
 # Convenience factory functions for the most common single-op components.

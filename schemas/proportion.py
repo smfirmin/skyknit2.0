@@ -1,8 +1,8 @@
 """
 Proportion specification schema: dimensionless ratios for sweater component sizing.
 
-PrecisionPreference mirrors utilities.PrecisionLevel but lives in schemas to
-avoid a hard upward dependency from schemas onto utilities internals.
+PrecisionPreference mirrors utilities.PrecisionLevel and provides a bridge via
+to_precision_level() so downstream modules never hand-code the mapping.
 """
 
 from __future__ import annotations
@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from types import MappingProxyType
+
+from utilities.tolerance import PrecisionLevel
 
 
 class PrecisionPreference(str, Enum):
@@ -25,6 +27,10 @@ class PrecisionPreference(str, Enum):
     HIGH = "HIGH"
     MEDIUM = "MEDIUM"
     LOW = "LOW"
+
+    def to_precision_level(self) -> PrecisionLevel:
+        """Return the corresponding utilities.PrecisionLevel for this preference."""
+        return PrecisionLevel[self.name]
 
 
 @dataclass(frozen=True)

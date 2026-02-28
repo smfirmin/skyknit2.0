@@ -9,6 +9,8 @@ Covers:
   - EdgeTypeEntry and JoinTypeEntry field values from known YAML data
 """
 
+from types import MappingProxyType
+
 import pytest
 
 from topology import (
@@ -48,20 +50,10 @@ class TestEdge:
         edge = Edge(name="yoke_underarm", edge_type=EdgeType.LIVE_STITCH, join_ref="underarm_join")
         assert edge.join_ref == "underarm_join"
 
-    def test_edge_is_mutable(self):
+    def test_edge_is_frozen(self):
         edge = Edge(name="original", edge_type=EdgeType.CAST_ON)
-        edge.name = "updated"
-        assert edge.name == "updated"
-
-    def test_edge_type_can_be_reassigned(self):
-        edge = Edge(name="test", edge_type=EdgeType.CAST_ON)
-        edge.edge_type = EdgeType.LIVE_STITCH
-        assert edge.edge_type == EdgeType.LIVE_STITCH
-
-    def test_join_ref_can_be_reassigned(self):
-        edge = Edge(name="test", edge_type=EdgeType.BOUND_OFF)
-        edge.join_ref = "seam_join_1"
-        assert edge.join_ref == "seam_join_1"
+        with pytest.raises(AttributeError):
+            edge.name = "updated"  # type: ignore[misc]
 
     def test_all_edge_types_accepted(self):
         for et in EdgeType:
@@ -101,38 +93,49 @@ class TestJoin:
             join_type=JoinType.CAST_ON_JOIN,
             edge_a_ref="yoke.underarm",
             edge_b_ref="sleeve.cast_on",
-            parameters={"cast_on_count": 8, "cast_on_method": "backward_loop"},
+            parameters=MappingProxyType({"cast_on_count": 8, "cast_on_method": "backward_loop"}),
         )
         assert join.parameters["cast_on_count"] == 8
         assert join.parameters["cast_on_method"] == "backward_loop"
 
     def test_parameters_are_independent_between_instances(self):
-        """Two joins created without explicit parameters must not share the same dict."""
+        """Two joins with default parameters must not share the same proxy object."""
         join_a = Join(id="j1", join_type=JoinType.CONTINUATION, edge_a_ref="a.e", edge_b_ref="b.e")
         join_b = Join(id="j2", join_type=JoinType.CONTINUATION, edge_a_ref="c.e", edge_b_ref="d.e")
-        join_a.parameters["injected"] = True
-        assert "injected" not in join_b.parameters
+        assert join_a.parameters is not join_b.parameters
 
-    def test_join_is_mutable(self):
+    def test_join_is_frozen(self):
         join = Join(
             id="original",
             join_type=JoinType.SEAM,
             edge_a_ref="a.bound_off",
             edge_b_ref="b.bound_off",
         )
-        join.id = "updated"
-        assert join.id == "updated"
+        with pytest.raises(AttributeError):
+            join.id = "updated"  # type: ignore[misc]
 
-    def test_parameters_dict_is_mutable(self):
+    def test_parameters_are_immutable(self):
         join = Join(
             id="j1",
             join_type=JoinType.PICKUP,
             edge_a_ref="body.neck",
             edge_b_ref="neckband.cast_on",
-            parameters={"pickup_ratio": "3:4"},
+            parameters=MappingProxyType({"pickup_ratio": "3:4"}),
         )
-        join.parameters["pickup_direction"] = "left_to_right"
-        assert join.parameters["pickup_direction"] == "left_to_right"
+        with pytest.raises(TypeError):
+            join.parameters["pickup_direction"] = "left_to_right"  # type: ignore[index]
+
+    def test_plain_dict_parameters_auto_converted(self):
+        """Plain dicts passed at construction are promoted to MappingProxyType."""
+        join = Join(
+            id="j1",
+            join_type=JoinType.CAST_ON_JOIN,
+            edge_a_ref="a.e",
+            edge_b_ref="b.e",
+            parameters={"cast_on_count": 12},  # type: ignore[arg-type]
+        )
+        assert isinstance(join.parameters, MappingProxyType)
+        assert join.parameters["cast_on_count"] == 12
 
     def test_all_join_types_accepted(self):
         for jt in JoinType:

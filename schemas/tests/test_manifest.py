@@ -105,8 +105,40 @@ class TestComponentSpec:
         for v in body_spec.dimensions.values():
             assert isinstance(v, float)
 
+    def test_dimensions_are_immutable(self, body_spec):
+        from types import MappingProxyType
+
+        assert isinstance(body_spec.dimensions, MappingProxyType)
+        with pytest.raises(TypeError):
+            body_spec.dimensions["new_key"] = 1.0  # type: ignore[index]
+
     def test_instantiation_count(self, sleeve_spec):
         assert sleeve_spec.instantiation_count == 2
+
+    def test_rejects_zero_instantiation_count(self, body_edges):
+        with pytest.raises(ValueError, match="instantiation_count must be >= 1"):
+            ComponentSpec(
+                name="ghost",
+                shape_type=ShapeType.RECTANGLE,
+                dimensions={"width_mm": 100.0},
+                edges=body_edges,
+                handedness=Handedness.NONE,
+                instantiation_count=0,
+            )
+
+    def test_plain_dict_dimensions_auto_converted(self, body_edges):
+        """Plain dict passed for dimensions is promoted to MappingProxyType."""
+        from types import MappingProxyType
+
+        spec = ComponentSpec(
+            name="test",
+            shape_type=ShapeType.RECTANGLE,
+            dimensions={"width_mm": 200.0},
+            edges=body_edges,
+            handedness=Handedness.NONE,
+            instantiation_count=1,
+        )
+        assert isinstance(spec.dimensions, MappingProxyType)
 
 
 class TestShapeManifest:

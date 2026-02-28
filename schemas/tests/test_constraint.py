@@ -43,6 +43,22 @@ class TestStitchMotif:
         with pytest.raises(Exception):
             sample_motif.stitch_repeat = 8
 
+    def test_rejects_zero_stitch_repeat(self):
+        with pytest.raises(ValueError, match="stitch_repeat must be >= 1"):
+            StitchMotif(name="bad", stitch_repeat=0, row_repeat=1)
+
+    def test_rejects_negative_stitch_repeat(self):
+        with pytest.raises(ValueError, match="stitch_repeat must be >= 1"):
+            StitchMotif(name="bad", stitch_repeat=-2, row_repeat=1)
+
+    def test_rejects_zero_row_repeat(self):
+        with pytest.raises(ValueError, match="row_repeat must be >= 1"):
+            StitchMotif(name="bad", stitch_repeat=4, row_repeat=0)
+
+    def test_rejects_negative_row_repeat(self):
+        with pytest.raises(ValueError, match="row_repeat must be >= 1"):
+            StitchMotif(name="bad", stitch_repeat=4, row_repeat=-1)
+
 
 class TestYarnSpec:
     def test_construction(self, sample_yarn):
@@ -53,6 +69,14 @@ class TestYarnSpec:
     def test_is_frozen(self, sample_yarn):
         with pytest.raises(Exception):
             sample_yarn.weight = "worsted"
+
+    def test_rejects_zero_needle_size(self):
+        with pytest.raises(ValueError, match="needle_size_mm must be positive"):
+            YarnSpec(weight="DK", fiber="wool", needle_size_mm=0.0)
+
+    def test_rejects_negative_needle_size(self):
+        with pytest.raises(ValueError, match="needle_size_mm must be positive"):
+            YarnSpec(weight="DK", fiber="wool", needle_size_mm=-1.5)
 
 
 class TestConstraintObject:
@@ -87,3 +111,23 @@ class TestConstraintObject:
             physical_tolerance_mm=3.0,
         )
         assert obj.hard_constraints == ()
+
+    def test_rejects_zero_tolerance(self, sample_gauge, sample_motif, sample_yarn):
+        with pytest.raises(ValueError, match="physical_tolerance_mm must be positive"):
+            ConstraintObject(
+                gauge=sample_gauge,
+                stitch_motif=sample_motif,
+                hard_constraints=(),
+                yarn_spec=sample_yarn,
+                physical_tolerance_mm=0.0,
+            )
+
+    def test_rejects_negative_tolerance(self, sample_gauge, sample_motif, sample_yarn):
+        with pytest.raises(ValueError, match="physical_tolerance_mm must be positive"):
+            ConstraintObject(
+                gauge=sample_gauge,
+                stitch_motif=sample_motif,
+                hard_constraints=(),
+                yarn_spec=sample_yarn,
+                physical_tolerance_mm=-2.5,
+            )

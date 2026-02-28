@@ -28,6 +28,12 @@ class StitchMotif:
     stitch_repeat: int
     row_repeat: int
 
+    def __post_init__(self) -> None:
+        if self.stitch_repeat < 1:
+            raise ValueError(f"stitch_repeat must be >= 1, got {self.stitch_repeat}")
+        if self.row_repeat < 1:
+            raise ValueError(f"row_repeat must be >= 1, got {self.row_repeat}")
+
 
 @dataclass(frozen=True)
 class YarnSpec:
@@ -43,6 +49,10 @@ class YarnSpec:
     weight: str
     fiber: str
     needle_size_mm: float
+
+    def __post_init__(self) -> None:
+        if self.needle_size_mm <= 0:
+            raise ValueError(f"needle_size_mm must be positive, got {self.needle_size_mm}")
 
 
 @dataclass(frozen=True)
@@ -69,3 +79,9 @@ class ConstraintObject:
     hard_constraints: tuple[int, ...]
     yarn_spec: YarnSpec
     physical_tolerance_mm: float
+
+    def __post_init__(self) -> None:
+        if self.physical_tolerance_mm <= 0:
+            raise ValueError(
+                f"physical_tolerance_mm must be positive, got {self.physical_tolerance_mm}"
+            )

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from types import MappingProxyType
 from typing import Any, Optional
 
 # ── Enums ──────────────────────────────────────────────────────────────────────
@@ -110,7 +111,7 @@ class WriterDispatchEntry:
 # ── Runtime objects ────────────────────────────────────────────────────────────
 
 
-@dataclass
+@dataclass(frozen=True)
 class Edge:
     """A typed boundary of a component shape."""
 
@@ -119,7 +120,7 @@ class Edge:
     join_ref: Optional[str] = None  # ID of the Join object; None for OPEN edges
 
 
-@dataclass
+@dataclass(frozen=True)
 class Join:
     """
     First-class connection between exactly two component edges.
@@ -134,4 +135,11 @@ class Join:
     join_type: JoinType
     edge_a_ref: str  # "component_name.edge_name"
     edge_b_ref: str  # "component_name.edge_name"
-    parameters: dict[str, Any] = field(default_factory=dict)  # join-owned parameters
+    parameters: MappingProxyType[str, Any] = field(
+        default_factory=lambda: MappingProxyType({})
+    )
+
+    def __post_init__(self) -> None:
+        # Accept plain dicts at construction sites and silently promote to MappingProxyType.
+        if isinstance(self.parameters, dict):
+            object.__setattr__(self, "parameters", MappingProxyType(self.parameters))
