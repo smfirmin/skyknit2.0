@@ -13,7 +13,7 @@ Skyknit 2.0 is an AI-powered knitting pattern generator for top-down sweater con
 uv sync --extra dev
 
 # Tests
-python3.14 -m pytest                          # run all tests (495 tests across 7 packages)
+python3.14 -m pytest                          # run all tests (579 tests across 8 packages)
 python3.14 -m pytest -v                       # verbose
 python3.14 -m pytest topology/tests/ -v       # topology package only
 python3.14 -m pytest utilities/tests/ -v      # utilities package only
@@ -21,6 +21,7 @@ python3.14 -m pytest schemas/tests/ -v        # schemas package only
 python3.14 -m pytest checker/tests/ -v        # checker package only
 python3.14 -m pytest validator/tests/ -v      # validator package only
 python3.14 -m pytest fillers/tests/ -v        # fillers package only
+python3.14 -m pytest planner/tests/ planner/garments/tests/ -v  # planner package only
 
 # Lint & format
 uv run ruff check .                    # lint
@@ -45,7 +46,7 @@ GitHub Actions runs three parallel jobs on every push and PR to main: **lint** (
 
 ## Architecture
 
-Seven implemented packages, each with its own `tests/` subdirectory:
+Eight implemented packages, each with its own `tests/` subdirectory:
 
 - **topology/** — Core package: edge/join type registry backed by YAML lookup tables
   - `types.py` — Enums (`EdgeType`, `JoinType`, `CompatibilityResult`, `ArithmeticImplication`, `RenderingMode`) and frozen dataclasses (`EdgeTypeEntry`, `JoinTypeEntry`, `CompatibilityEntry`, `ArithmeticEntry`, `WriterDispatchEntry`); also runtime objects `Edge` and `Join`
@@ -89,6 +90,15 @@ Seven implemented packages, each with its own `tests/` subdirectory:
   - `filler.py` — `FillerInput`, `FillerOutput`, `StitchFiller` protocol, `DeterministicFiller`
   - `tests/` — tests across 4 test files
 
+- **planner/** — Planner: converts GarmentSpec + ProportionSpec + measurements → ShapeManifest
+  - `dimensions.py` — `compute_dimensions`: applies `DimensionRule` objects to measurements + ratios
+  - `component_specs.py` — `build_component_spec`: assembles `ComponentSpec` from a `ComponentBlueprint`
+  - `joins.py` — `build_join`, `build_all_joins`: constructs `Join` objects from `JoinSpec` + topology defaults
+  - `manifest_builder.py` — `build_shape_manifest`: full pipeline (validate → dims → specs → joins → manifest)
+  - `planner.py` — `PlannerInput`, `PlannerOutput`, `Planner` protocol, `DeterministicPlanner`
+  - `garments/v1_yoke_pullover.py` — `make_v1_yoke_pullover()`: canonical v1 GarmentSpec factory
+  - `tests/` + `garments/tests/` — 84 tests across 6 test files
+
 See `ARCHITECTURE.md` for full system design, pipeline, and module build order.
 
 ## Code Conventions
@@ -122,6 +132,7 @@ topology  ──no upstream deps──▶  (pure domain, depends only on PyYAML)
 checker   ──depends on──▶  schemas, utilities, topology
 validator ──depends on──▶  schemas, topology
 fillers   ──depends on──▶  schemas, utilities, topology, checker
+planner   ──depends on──▶  schemas, topology, validator (integration tests only), fillers (integration tests only)
 ```
 
 ## Adding New Data (Topology Tables)

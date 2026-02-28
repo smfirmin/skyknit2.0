@@ -6,6 +6,13 @@ object, proportion spec) that flow between architectural modules.
 """
 
 from .constraint import ConstraintObject, StitchMotif, YarnSpec
+from .garment import (
+    ComponentBlueprint,
+    DimensionRule,
+    EdgeSpec,
+    GarmentSpec,
+    JoinSpec,
+)
 from .ir import (
     ComponentIR,
     Operation,
@@ -37,4 +44,10 @@ __all__ = [
     "make_cast_on",
     "make_work_even",
     "make_bind_off",
+    # garment
+    "EdgeSpec",
+    "DimensionRule",
+    "ComponentBlueprint",
+    "JoinSpec",
+    "GarmentSpec",
 ]
