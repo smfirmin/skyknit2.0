@@ -31,6 +31,16 @@ class TestEdgeSpec:
         assert es.edge_type == EdgeType.CAST_ON
         assert es.join_id == "j2"
 
+    def test_dimension_key_defaults_to_none(self):
+        es = EdgeSpec(name="top", edge_type=EdgeType.LIVE_STITCH)
+        assert es.dimension_key is None
+
+    def test_dimension_key_stored(self):
+        es = EdgeSpec(
+            name="top", edge_type=EdgeType.LIVE_STITCH, dimension_key="top_circumference_mm"
+        )
+        assert es.dimension_key == "top_circumference_mm"
+
 
 class TestDimensionRule:
     def test_is_frozen(self):

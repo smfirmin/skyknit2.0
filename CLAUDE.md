@@ -13,7 +13,7 @@ Skyknit 2.0 is an AI-powered knitting pattern generator for top-down sweater con
 uv sync --extra dev
 
 # Tests
-python3.14 -m pytest                          # run all tests (579 tests across 8 packages)
+python3.14 -m pytest                          # run all tests (616 tests across 8 packages)
 python3.14 -m pytest -v                       # verbose
 python3.14 -m pytest topology/tests/ -v       # topology package only
 python3.14 -m pytest utilities/tests/ -v      # utilities package only

@@ -118,6 +118,7 @@ class Edge:
     name: str
     edge_type: EdgeType
     join_ref: Optional[str] = None  # ID of the Join object; None for OPEN edges
+    dimension_key: Optional[str] = None  # explicit resolver routing; None = positional fallback
 
 
 @dataclass(frozen=True)

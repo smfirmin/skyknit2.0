@@ -27,6 +27,7 @@ def build_component_spec(
             name=edge_spec.name,
             edge_type=edge_spec.edge_type,
             join_ref=edge_spec.join_id,
+            dimension_key=edge_spec.dimension_key,
         )
         for edge_spec in blueprint.edges
     )

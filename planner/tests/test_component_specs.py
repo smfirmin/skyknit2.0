@@ -91,3 +91,22 @@ class TestBuildComponentSpec:
         bp = _bp("body", ShapeType.CYLINDER, Handedness.NONE)
         spec = build_component_spec(bp, {})
         assert spec.edges == ()
+
+    def test_edge_dimension_key_defaults_to_none(self):
+        bp = _bp(
+            "body", ShapeType.CYLINDER, Handedness.NONE, EdgeSpec("top", EdgeType.LIVE_STITCH, None)
+        )
+        spec = build_component_spec(bp, {})
+        top = next(e for e in spec.edges if e.name == "top")
+        assert top.dimension_key is None
+
+    def test_edge_dimension_key_propagated(self):
+        bp = _bp(
+            "body",
+            ShapeType.CYLINDER,
+            Handedness.NONE,
+            EdgeSpec("top", EdgeType.LIVE_STITCH, None, "circumference_mm"),
+        )
+        spec = build_component_spec(bp, {})
+        top = next(e for e in spec.edges if e.name == "top")
+        assert top.dimension_key == "circumference_mm"

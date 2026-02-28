@@ -172,6 +172,73 @@ class TestSymmetricMirroring:
         assert mirrored.ending_stitch_count == output.ir.ending_stitch_count
 
 
+class TestDeterministicFillerWithSelvedgeEdges:
+    """SELVEDGE edges have no stitch count; DeterministicFiller must not raise for them."""
+
+    def _body_with_armholes(self) -> ComponentSpec:
+        """CYLINDER body with 2 SELVEDGE armhole edges (drop-shoulder style)."""
+        return ComponentSpec(
+            name="body",
+            shape_type=ShapeType.CYLINDER,
+            dimensions={"circumference_mm": 914.4, "depth_mm": 457.2},
+            edges=(
+                Edge(name="neck", edge_type=EdgeType.CAST_ON, join_ref=None),
+                Edge(name="hem", edge_type=EdgeType.BOUND_OFF, join_ref=None),
+                Edge(name="left_armhole", edge_type=EdgeType.SELVEDGE, join_ref="j_left"),
+                Edge(name="right_armhole", edge_type=EdgeType.SELVEDGE, join_ref="j_right"),
+            ),
+            handedness=Handedness.NONE,
+            instantiation_count=1,
+        )
+
+    def test_selvedge_edges_do_not_raise(self):
+        filler = DeterministicFiller()
+        fi = FillerInput(self._body_with_armholes(), CONSTRAINT, (), Handedness.NONE)
+        output = filler.fill(fi)  # must not raise
+        assert isinstance(output, FillerOutput)
+
+    def test_selvedge_edges_excluded_from_resolved_counts(self):
+        filler = DeterministicFiller()
+        fi = FillerInput(self._body_with_armholes(), CONSTRAINT, (), Handedness.NONE)
+        output = filler.fill(fi)
+        assert output.resolved_counts["left_armhole"] is None
+        assert output.resolved_counts["right_armhole"] is None
+
+    def test_dimension_bearing_edges_still_resolved(self):
+        filler = DeterministicFiller()
+        fi = FillerInput(self._body_with_armholes(), CONSTRAINT, (), Handedness.NONE)
+        output = filler.fill(fi)
+        assert output.resolved_counts["neck"] is not None
+        assert output.resolved_counts["hem"] is not None
+
+    def test_selvedge_bearing_cylinder_produces_valid_ir(self):
+        filler = DeterministicFiller()
+        fi = FillerInput(self._body_with_armholes(), CONSTRAINT, (), Handedness.NONE)
+        output = filler.fill(fi)
+        from schemas.ir import OpType
+
+        op_types = [op.op_type for op in output.ir.operations]
+        assert OpType.CAST_ON in op_types
+        assert OpType.BIND_OFF in op_types
+
+    def test_unresolvable_dimension_bearing_edge_still_raises(self):
+        """LIVE_STITCH edge with no resolvable dimension must still raise ValueError."""
+        import pytest
+
+        spec = ComponentSpec(
+            name="bad",
+            shape_type=ShapeType.CYLINDER,
+            dimensions={"depth_mm": 457.2},  # missing circumference_mm
+            edges=(Edge(name="top", edge_type=EdgeType.LIVE_STITCH, join_ref=None),),
+            handedness=Handedness.NONE,
+            instantiation_count=1,
+        )
+        filler = DeterministicFiller()
+        fi = FillerInput(spec, CONSTRAINT, (), Handedness.NONE)
+        with pytest.raises(ValueError, match="top"):
+            filler.fill(fi)
+
+
 class TestProtocolConformance:
     def test_deterministic_filler_satisfies_protocol(self):
         assert isinstance(DeterministicFiller(), StitchFiller)

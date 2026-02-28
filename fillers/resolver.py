@@ -5,11 +5,17 @@ resolve_stitch_counts converts each edge's physical dimension into a stitch
 count using the shared utilities pipeline (identical to the one used by the
 Algebraic Checker — they must never diverge).
 
-Dimension-to-edge mapping by shape type:
+Dimension-to-edge mapping by shape type (positional fallback):
   CYLINDER   — single circumference_mm applies to every circumferential edge
   TRAPEZOID  — top_circumference_mm for the top edge, bottom_circumference_mm
                for the bottom edge (by convention: first edge = top)
   RECTANGLE  — width_mm applies to every horizontal edge
+
+Named routing (takes precedence when set):
+  If Edge.dimension_key is not None, that key is looked up directly in the
+  component's dimensions dict, bypassing positional inference.  Use this for
+  components with more than two horizontal edges, or where edge order does not
+  match the positional convention.
 
 Edges whose dimension cannot be inferred from the component's dimension dict
 (e.g. a SELVEDGE or OPEN edge with no matching key) are mapped to None in the
@@ -51,7 +57,9 @@ def resolve_stitch_counts(
     hard = list(constraint.hard_constraints) if constraint.hard_constraints else None
 
     for idx, edge in enumerate(component_spec.edges):
-        dimension_mm = _resolve_dimension(component_spec.shape_type, dim, edge.edge_type, idx)
+        dimension_mm = _resolve_dimension(
+            component_spec.shape_type, dim, edge.edge_type, idx, edge.dimension_key
+        )
         if dimension_mm is None:
             result[edge.name] = None
         else:
@@ -74,16 +82,20 @@ def _resolve_dimension(
     dimensions: object,  # MappingProxyType[str, float]
     edge_type: EdgeType,
     edge_index: int,
+    dimension_key: str | None = None,
 ) -> float | None:
     """
     Return the physical dimension (mm) for a specific edge, or None.
 
-    The mapping uses shape_type + edge position:
+    If *dimension_key* is provided, it is looked up directly in *dimensions*
+    (named routing).  Otherwise, the mapping falls back to shape_type + edge
+    position (positional routing):
       CYLINDER   → circumference_mm (same for all edges)
       TRAPEZOID  → top_circumference_mm (index 0) / bottom_circumference_mm (index 1+)
       RECTANGLE  → width_mm (same for all edges)
 
-    SELVEDGE edges are lateral (row-based) and have no stitch dimension → None.
+    SELVEDGE edges are lateral (row-based) and have no stitch dimension → None,
+    regardless of routing mode.
     """
     from types import MappingProxyType
 
@@ -97,6 +109,11 @@ def _resolve_dimension(
     if edge_type == EdgeType.SELVEDGE:
         return None
 
+    # Named routing takes precedence when dimension_key is set
+    if dimension_key is not None:
+        return dims.get(dimension_key)
+
+    # Positional fallback
     match shape_type:
         case ShapeType.CYLINDER:
             return dims.get("circumference_mm")

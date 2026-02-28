@@ -194,3 +194,111 @@ class TestReturnType:
         spec = _cylinder_spec(508.0)
         result = resolve_stitch_counts(spec, _constraint())
         assert set(result.keys()) == {"top", "bottom"}
+
+
+class TestNamedRouting:
+    """Edge.dimension_key overrides the positional fallback when set."""
+
+    def test_named_key_resolves_on_cylinder(self):
+        """Explicit dimension_key is looked up directly, ignoring shape_type convention."""
+        spec = ComponentSpec(
+            name="body",
+            shape_type=ShapeType.CYLINDER,
+            dimensions={"circumference_mm": 508.0, "depth_mm": 457.2},
+            edges=(
+                Edge(
+                    name="top",
+                    edge_type=EdgeType.LIVE_STITCH,
+                    join_ref=None,
+                    dimension_key="circumference_mm",
+                ),
+            ),
+            handedness=Handedness.NONE,
+            instantiation_count=1,
+        )
+        result = resolve_stitch_counts(spec, _constraint())
+        assert result["top"] == 400  # 508mm → 400 sts at 20 sts/inch
+
+    def test_named_key_overrides_positional_on_trapezoid(self):
+        """Index-1 edge normally → bottom_circumference_mm; dimension_key overrides to top."""
+        spec = ComponentSpec(
+            name="sleeve",
+            shape_type=ShapeType.TRAPEZOID,
+            dimensions={
+                "top_circumference_mm": 508.0,  # → 400 sts
+                "bottom_circumference_mm": 254.0,  # → 200 sts
+                "depth_mm": 457.2,
+            },
+            edges=(
+                Edge(name="top", edge_type=EdgeType.LIVE_STITCH, join_ref=None),
+                # Index 1 would normally → bottom, but dimension_key forces top
+                Edge(
+                    name="mid",
+                    edge_type=EdgeType.LIVE_STITCH,
+                    join_ref=None,
+                    dimension_key="top_circumference_mm",
+                ),
+            ),
+            handedness=Handedness.NONE,
+            instantiation_count=1,
+        )
+        result = resolve_stitch_counts(spec, _constraint())
+        assert result["mid"] == 400  # named key overrides positional → top value
+
+    def test_named_key_missing_from_dimensions_returns_none(self):
+        """dimension_key pointing to an absent key returns None."""
+        spec = ComponentSpec(
+            name="body",
+            shape_type=ShapeType.CYLINDER,
+            dimensions={"circumference_mm": 508.0},
+            edges=(
+                Edge(
+                    name="top",
+                    edge_type=EdgeType.LIVE_STITCH,
+                    join_ref=None,
+                    dimension_key="nonexistent_key",
+                ),
+            ),
+            handedness=Handedness.NONE,
+            instantiation_count=1,
+        )
+        result = resolve_stitch_counts(spec, _constraint())
+        assert result["top"] is None
+
+    def test_none_dimension_key_uses_cylinder_positional(self):
+        """dimension_key=None falls back to positional: CYLINDER → circumference_mm."""
+        spec = ComponentSpec(
+            name="body",
+            shape_type=ShapeType.CYLINDER,
+            dimensions={"circumference_mm": 508.0, "depth_mm": 457.2},
+            edges=(
+                Edge(name="top", edge_type=EdgeType.LIVE_STITCH, join_ref=None, dimension_key=None),
+            ),
+            handedness=Handedness.NONE,
+            instantiation_count=1,
+        )
+        result = resolve_stitch_counts(spec, _constraint())
+        assert result["top"] == 400
+
+    def test_none_dimension_key_uses_trapezoid_positional(self):
+        """dimension_key=None falls back to positional: TRAPEZOID index 0 → top_circumference_mm."""
+        spec = ComponentSpec(
+            name="sleeve",
+            shape_type=ShapeType.TRAPEZOID,
+            dimensions={
+                "top_circumference_mm": 508.0,
+                "bottom_circumference_mm": 254.0,
+                "depth_mm": 457.2,
+            },
+            edges=(
+                Edge(name="top", edge_type=EdgeType.LIVE_STITCH, join_ref=None, dimension_key=None),
+                Edge(
+                    name="bottom", edge_type=EdgeType.BOUND_OFF, join_ref=None, dimension_key=None
+                ),
+            ),
+            handedness=Handedness.NONE,
+            instantiation_count=1,
+        )
+        result = resolve_stitch_counts(spec, _constraint())
+        assert result["top"] == 400
+        assert result["bottom"] == 200

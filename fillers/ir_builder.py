@@ -24,8 +24,15 @@ from __future__ import annotations
 from schemas.constraint import ConstraintObject
 from schemas.ir import ComponentIR, Operation, OpType
 from schemas.manifest import ComponentSpec, Handedness
-from topology.types import Join
+from topology.types import Edge, EdgeType, Join
 from utilities.conversion import physical_to_section_rows
+
+# Edge types that carry stitch counts and define the structural start/end of a
+# component's knitting work.  SELVEDGE and OPEN edges are lateral/terminal and
+# are skipped when finding start and end edges.
+_STRUCTURAL: frozenset[EdgeType] = frozenset(
+    {EdgeType.CAST_ON, EdgeType.LIVE_STITCH, EdgeType.BOUND_OFF}
+)
 
 
 def build_component_ir(
@@ -72,8 +79,16 @@ def build_component_ir(
     if not edges:
         raise ValueError(f"component '{component_spec.name}' has no edges")
 
-    start_edge = edges[0]
-    end_edge = edges[-1]
+    # Use only structural edges (CAST_ON, LIVE_STITCH, BOUND_OFF) as start/end.
+    # SELVEDGE and OPEN edges are lateral/terminal and do not define the knitting work.
+    structural: list[Edge] = [e for e in edges if e.edge_type in _STRUCTURAL]
+    if not structural:
+        raise ValueError(
+            f"component '{component_spec.name}' has no structural edges (CAST_ON, LIVE_STITCH, BOUND_OFF)"
+        )
+
+    start_edge = structural[0]
+    end_edge = structural[-1]
 
     start_count = stitch_counts.get(start_edge.name)
     end_count = stitch_counts.get(end_edge.name)

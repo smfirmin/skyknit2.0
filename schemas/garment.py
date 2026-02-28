@@ -5,7 +5,7 @@ Produced by the Design Module (LLM) or a canonical factory; consumed by the Plan
 Carries zero stitch awareness — all dimensions are physical (mm).
 
 Key types:
-  EdgeSpec          — one edge blueprint (name, edge_type, join_id)
+  EdgeSpec          — one edge blueprint (name, edge_type, join_id, dimension_key)
   DimensionRule     — formula: measurements[measurement_key] × ratios[ratio_key]
   ComponentBlueprint — full spec for one component
   JoinSpec          — one join in the topology
@@ -27,6 +27,7 @@ class EdgeSpec:
     name: str
     edge_type: EdgeType
     join_id: str | None = None  # None for terminal edges (no Join connection)
+    dimension_key: str | None = None  # explicit resolver routing; None = positional fallback
 
 
 @dataclass(frozen=True)
