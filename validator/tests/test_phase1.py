@@ -39,15 +39,19 @@ class TestValidManifest:
         """LIVE_STITCH → LIVE_STITCH via CONTINUATION with correct refs → pass."""
         manifest = ShapeManifest(
             components=(
-                _spec("yoke", (Edge(name="bottom", edge_type=EdgeType.LIVE_STITCH, join_ref="j1"),)),
+                _spec(
+                    "yoke", (Edge(name="bottom", edge_type=EdgeType.LIVE_STITCH, join_ref="j1"),)
+                ),
                 _spec("body", (Edge(name="top", edge_type=EdgeType.LIVE_STITCH, join_ref="j1"),)),
             ),
-            joins=(Join(
-                id="j1",
-                join_type=JoinType.CONTINUATION,
-                edge_a_ref="yoke.bottom",
-                edge_b_ref="body.top",
-            ),),
+            joins=(
+                Join(
+                    id="j1",
+                    join_type=JoinType.CONTINUATION,
+                    edge_a_ref="yoke.bottom",
+                    edge_b_ref="body.top",
+                ),
+            ),
         )
         result = validate_phase1(manifest)
         assert result.passed is True
@@ -70,7 +74,11 @@ class TestCompatibilityErrors:
                 _spec("a", (Edge(name="top", edge_type=EdgeType.CAST_ON, join_ref="j1"),)),
                 _spec("b", (Edge(name="top", edge_type=EdgeType.LIVE_STITCH, join_ref="j1"),)),
             ),
-            joins=(Join(id="j1", join_type=JoinType.CONTINUATION, edge_a_ref="a.top", edge_b_ref="b.top"),),
+            joins=(
+                Join(
+                    id="j1", join_type=JoinType.CONTINUATION, edge_a_ref="a.top", edge_b_ref="b.top"
+                ),
+            ),
         )
         result = validate_phase1(manifest)
         assert result.passed is False
@@ -82,7 +90,14 @@ class TestCompatibilityErrors:
                 _spec("sleeve", (Edge(name="cuff", edge_type=EdgeType.OPEN, join_ref="j1"),)),
                 _spec("body", (Edge(name="top", edge_type=EdgeType.LIVE_STITCH, join_ref="j1"),)),
             ),
-            joins=(Join(id="j1", join_type=JoinType.CONTINUATION, edge_a_ref="sleeve.cuff", edge_b_ref="body.top"),),
+            joins=(
+                Join(
+                    id="j1",
+                    join_type=JoinType.CONTINUATION,
+                    edge_a_ref="sleeve.cuff",
+                    edge_b_ref="body.top",
+                ),
+            ),
         )
         result = validate_phase1(manifest)
         assert result.passed is False
@@ -92,7 +107,9 @@ class TestSpatialErrors:
     def test_dangling_join_ref_fails(self):
         manifest = ShapeManifest(
             components=(
-                _spec("body", (Edge(name="top", edge_type=EdgeType.LIVE_STITCH, join_ref="missing"),)),
+                _spec(
+                    "body", (Edge(name="top", edge_type=EdgeType.LIVE_STITCH, join_ref="missing"),)
+                ),
             ),
             joins=(),
         )
@@ -103,7 +120,11 @@ class TestSpatialErrors:
     def test_join_with_bad_edge_ref_fails(self):
         manifest = ShapeManifest(
             components=(),
-            joins=(Join(id="j1", join_type=JoinType.CONTINUATION, edge_a_ref="a.top", edge_b_ref="b.top"),),
+            joins=(
+                Join(
+                    id="j1", join_type=JoinType.CONTINUATION, edge_a_ref="a.top", edge_b_ref="b.top"
+                ),
+            ),
         )
         result = validate_phase1(manifest)
         assert result.passed is False
@@ -116,13 +137,20 @@ class TestCombinedErrors:
         # Plus a dangling join_ref on a separate edge → spatial error
         manifest = ShapeManifest(
             components=(
-                _spec("a", (
-                    Edge(name="top", edge_type=EdgeType.CAST_ON, join_ref="j1"),
-                    Edge(name="side", edge_type=EdgeType.LIVE_STITCH, join_ref="nonexistent"),
-                )),
+                _spec(
+                    "a",
+                    (
+                        Edge(name="top", edge_type=EdgeType.CAST_ON, join_ref="j1"),
+                        Edge(name="side", edge_type=EdgeType.LIVE_STITCH, join_ref="nonexistent"),
+                    ),
+                ),
                 _spec("b", (Edge(name="top", edge_type=EdgeType.LIVE_STITCH, join_ref="j1"),)),
             ),
-            joins=(Join(id="j1", join_type=JoinType.CONTINUATION, edge_a_ref="a.top", edge_b_ref="b.top"),),
+            joins=(
+                Join(
+                    id="j1", join_type=JoinType.CONTINUATION, edge_a_ref="a.top", edge_b_ref="b.top"
+                ),
+            ),
         )
         result = validate_phase1(manifest)
         assert result.passed is False
@@ -135,7 +163,14 @@ class TestCombinedErrors:
                 _spec("front", (Edge(name="side", edge_type=EdgeType.LIVE_STITCH, join_ref="j1"),)),
                 _spec("back", (Edge(name="side", edge_type=EdgeType.LIVE_STITCH, join_ref="j1"),)),
             ),
-            joins=(Join(id="j1", join_type=JoinType.SEAM, edge_a_ref="front.side", edge_b_ref="back.side"),),
+            joins=(
+                Join(
+                    id="j1",
+                    join_type=JoinType.SEAM,
+                    edge_a_ref="front.side",
+                    edge_b_ref="back.side",
+                ),
+            ),
         )
         result = validate_phase1(manifest)
         assert result.passed is True

@@ -145,8 +145,10 @@ class TestValidateAllJoins:
             _join(JoinType.CONTINUATION, "yoke.sleeve", "sleeve.top"),
         ]
         counts = {
-            "yoke.bottom": 80, "body.top": 80,
-            "yoke.sleeve": 60, "sleeve.top": 60,
+            "yoke.bottom": 80,
+            "body.top": 80,
+            "yoke.sleeve": 60,
+            "sleeve.top": 60,
         }
         errors = validate_all_joins(joins, counts, TOLERANCE_MM, GAUGE)
         assert errors == []
@@ -157,8 +159,10 @@ class TestValidateAllJoins:
             _join(JoinType.CONTINUATION, "yoke.sleeve", "sleeve.top"),
         ]
         counts = {
-            "yoke.bottom": 80, "body.top": 40,   # mismatch
-            "yoke.sleeve": 60, "sleeve.top": 20,  # mismatch
+            "yoke.bottom": 80,
+            "body.top": 40,  # mismatch
+            "yoke.sleeve": 60,
+            "sleeve.top": 20,  # mismatch
         }
         errors = validate_all_joins(joins, counts, TOLERANCE_MM, GAUGE)
         assert len(errors) == 2

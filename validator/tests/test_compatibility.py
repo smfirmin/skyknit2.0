@@ -8,6 +8,7 @@ from validator.compatibility import ValidationError, validate_edge_join_compatib
 
 # ── Fixture helpers ────────────────────────────────────────────────────────────
 
+
 def _spec(name: str, edges: tuple) -> ComponentSpec:
     return ComponentSpec(
         name=name,
@@ -33,7 +34,9 @@ class TestValidCombinations:
         """LIVE_STITCH + LIVE_STITCH via CONTINUATION → VALID."""
         manifest = ShapeManifest(
             components=(
-                _spec("yoke", (Edge(name="bottom", edge_type=EdgeType.LIVE_STITCH, join_ref="j1"),)),
+                _spec(
+                    "yoke", (Edge(name="bottom", edge_type=EdgeType.LIVE_STITCH, join_ref="j1"),)
+                ),
                 _spec("body", (Edge(name="top", edge_type=EdgeType.LIVE_STITCH, join_ref="j1"),)),
             ),
             joins=(_join("j1", JoinType.CONTINUATION, "yoke.bottom", "body.top"),),
@@ -72,7 +75,9 @@ class TestValidCombinations:
 
     def test_no_joins_passes(self):
         manifest = ShapeManifest(
-            components=(_spec("body", (Edge(name="bottom", edge_type=EdgeType.BOUND_OFF, join_ref=None),)),),
+            components=(
+                _spec("body", (Edge(name="bottom", edge_type=EdgeType.BOUND_OFF, join_ref=None),)),
+            ),
             joins=(),
         )
         errors = validate_edge_join_compatibility(manifest)
@@ -155,12 +160,14 @@ class TestMissingEdges:
             components=(
                 _spec("body", (Edge(name="top", edge_type=EdgeType.LIVE_STITCH, join_ref="j1"),)),
             ),
-            joins=(Join(
-                id="j1",
-                join_type=JoinType.CONTINUATION,
-                edge_a_ref="nonexistent.bottom",  # not in manifest
-                edge_b_ref="body.top",
-            ),),
+            joins=(
+                Join(
+                    id="j1",
+                    join_type=JoinType.CONTINUATION,
+                    edge_a_ref="nonexistent.bottom",  # not in manifest
+                    edge_b_ref="body.top",
+                ),
+            ),
         )
         errors = validate_edge_join_compatibility(manifest)
         assert len(errors) == 1
@@ -169,14 +176,18 @@ class TestMissingEdges:
     def test_unresolvable_edge_b_ref_returns_error(self):
         manifest = ShapeManifest(
             components=(
-                _spec("yoke", (Edge(name="bottom", edge_type=EdgeType.LIVE_STITCH, join_ref="j1"),)),
+                _spec(
+                    "yoke", (Edge(name="bottom", edge_type=EdgeType.LIVE_STITCH, join_ref="j1"),)
+                ),
             ),
-            joins=(Join(
-                id="j1",
-                join_type=JoinType.CONTINUATION,
-                edge_a_ref="yoke.bottom",
-                edge_b_ref="ghost.top",  # not in manifest
-            ),),
+            joins=(
+                Join(
+                    id="j1",
+                    join_type=JoinType.CONTINUATION,
+                    edge_a_ref="yoke.bottom",
+                    edge_b_ref="ghost.top",  # not in manifest
+                ),
+            ),
         )
         errors = validate_edge_join_compatibility(manifest)
         assert len(errors) == 1
@@ -192,5 +203,6 @@ class TestReturnType:
     def test_validation_error_is_frozen(self):
         err = ValidationError(join_id="j1", message="test", severity="error")
         import pytest
+
         with pytest.raises(Exception):
             err.message = "changed"  # type: ignore[misc]

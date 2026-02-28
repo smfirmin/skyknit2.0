@@ -31,7 +31,9 @@ class TestValidManifest:
     def test_coherent_manifest_passes(self):
         manifest = ShapeManifest(
             components=(
-                _spec("yoke", (Edge(name="bottom", edge_type=EdgeType.LIVE_STITCH, join_ref="j1"),)),
+                _spec(
+                    "yoke", (Edge(name="bottom", edge_type=EdgeType.LIVE_STITCH, join_ref="j1"),)
+                ),
                 _spec("body", (Edge(name="top", edge_type=EdgeType.LIVE_STITCH, join_ref="j1"),)),
             ),
             joins=(_join("j1", "yoke.bottom", "body.top"),),
@@ -59,7 +61,10 @@ class TestDanglingJoinRef:
         """An edge's join_ref names a join that isn't in the manifest."""
         manifest = ShapeManifest(
             components=(
-                _spec("body", (Edge(name="top", edge_type=EdgeType.LIVE_STITCH, join_ref="missing_join"),)),
+                _spec(
+                    "body",
+                    (Edge(name="top", edge_type=EdgeType.LIVE_STITCH, join_ref="missing_join"),),
+                ),
             ),
             joins=(),  # no joins at all
         )
@@ -94,7 +99,9 @@ class TestJoinReferencingNonExistentEdge:
     def test_edge_b_ref_not_in_manifest(self):
         manifest = ShapeManifest(
             components=(
-                _spec("yoke", (Edge(name="bottom", edge_type=EdgeType.LIVE_STITCH, join_ref="j1"),)),
+                _spec(
+                    "yoke", (Edge(name="bottom", edge_type=EdgeType.LIVE_STITCH, join_ref="j1"),)
+                ),
             ),
             joins=(_join("j1", "yoke.bottom", "phantom.top"),),
         )

@@ -57,31 +57,37 @@ def validate_edge_join_compatibility(manifest: ShapeManifest) -> list[Validation
         edge_b = edge_map.get(join.edge_b_ref)
 
         if edge_a is None:
-            errors.append(ValidationError(
-                join_id=join.id,
-                message=f"edge_a_ref {join.edge_a_ref!r} does not resolve to a known edge",
-                severity="error",
-            ))
+            errors.append(
+                ValidationError(
+                    join_id=join.id,
+                    message=f"edge_a_ref {join.edge_a_ref!r} does not resolve to a known edge",
+                    severity="error",
+                )
+            )
             continue
 
         if edge_b is None:
-            errors.append(ValidationError(
-                join_id=join.id,
-                message=f"edge_b_ref {join.edge_b_ref!r} does not resolve to a known edge",
-                severity="error",
-            ))
+            errors.append(
+                ValidationError(
+                    join_id=join.id,
+                    message=f"edge_b_ref {join.edge_b_ref!r} does not resolve to a known edge",
+                    severity="error",
+                )
+            )
             continue
 
         # Terminal edges must not be the source of a structural join
         if registry.edge_types[edge_a.edge_type].is_terminal:
-            errors.append(ValidationError(
-                join_id=join.id,
-                message=(
-                    f"edge_a ({join.edge_a_ref}) has terminal type "
-                    f"{edge_a.edge_type.value!r} and cannot be a join source"
-                ),
-                severity="error",
-            ))
+            errors.append(
+                ValidationError(
+                    join_id=join.id,
+                    message=(
+                        f"edge_a ({join.edge_a_ref}) has terminal type "
+                        f"{edge_a.edge_type.value!r} and cannot be a join source"
+                    ),
+                    severity="error",
+                )
+            )
             continue
 
         result = registry.get_compatibility(edge_a.edge_type, edge_b.edge_type, join.join_type)
@@ -90,29 +96,33 @@ def validate_edge_join_compatibility(manifest: ShapeManifest) -> list[Validation
             case CompatibilityResult.VALID:
                 pass
             case CompatibilityResult.INVALID:
-                errors.append(ValidationError(
-                    join_id=join.id,
-                    message=(
-                        f"incompatible edge-join combination: "
-                        f"{edge_a.edge_type.value} + {edge_b.edge_type.value} "
-                        f"via {join.join_type.value}"
-                    ),
-                    severity="error",
-                ))
+                errors.append(
+                    ValidationError(
+                        join_id=join.id,
+                        message=(
+                            f"incompatible edge-join combination: "
+                            f"{edge_a.edge_type.value} + {edge_b.edge_type.value} "
+                            f"via {join.join_type.value}"
+                        ),
+                        severity="error",
+                    )
+                )
             case CompatibilityResult.CONDITIONAL:
                 condition_fn = registry.get_condition_fn(
                     edge_a.edge_type, edge_b.edge_type, join.join_type
                 )
-                errors.append(ValidationError(
-                    join_id=join.id,
-                    message=(
-                        f"conditional compatibility: "
-                        f"{edge_a.edge_type.value} + {edge_b.edge_type.value} "
-                        f"via {join.join_type.value} "
-                        f"(condition: {condition_fn!r} — evaluation deferred)"
-                    ),
-                    severity="warning",
-                ))
+                errors.append(
+                    ValidationError(
+                        join_id=join.id,
+                        message=(
+                            f"conditional compatibility: "
+                            f"{edge_a.edge_type.value} + {edge_b.edge_type.value} "
+                            f"via {join.join_type.value} "
+                            f"(condition: {condition_fn!r} — evaluation deferred)"
+                        ),
+                        severity="warning",
+                    )
+                )
 
     return errors
 

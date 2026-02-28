@@ -83,9 +83,7 @@ def build_component_ir(
             f"stitch count for start edge '{start_edge.name}' is None — cannot build IR"
         )
     if end_count is None:
-        raise ValueError(
-            f"stitch count for end edge '{end_edge.name}' is None — cannot build IR"
-        )
+        raise ValueError(f"stitch count for end edge '{end_edge.name}' is None — cannot build IR")
 
     depth_mm = component_spec.dimensions.get("depth_mm", 0.0)
     row_count = max(1, physical_to_section_rows(depth_mm, constraint.gauge)) if depth_mm else 1
@@ -191,7 +189,9 @@ def _mirror_op(op: Operation) -> Operation:
     """Swap SSK↔k2tog in notes to reflect mirrored shaping direction."""
     notes = op.notes
     if "SSK" in notes or "k2tog" in notes:
-        notes = notes.replace("SSK", "__K2TOG__").replace("k2tog", "SSK").replace("__K2TOG__", "k2tog")
+        notes = (
+            notes.replace("SSK", "__K2TOG__").replace("k2tog", "SSK").replace("__K2TOG__", "k2tog")
+        )
     return Operation(
         op_type=op.op_type,
         parameters=op.parameters,

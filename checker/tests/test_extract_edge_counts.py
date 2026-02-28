@@ -18,7 +18,9 @@ def _make_ir(operations: tuple, starting: int, ending: int, name: str = "body") 
     )
 
 
-def _make_spec(name: str, edges: tuple, shape_type: ShapeType = ShapeType.CYLINDER) -> ComponentSpec:
+def _make_spec(
+    name: str, edges: tuple, shape_type: ShapeType = ShapeType.CYLINDER
+) -> ComponentSpec:
     return ComponentSpec(
         name=name,
         shape_type=shape_type,
@@ -64,7 +66,7 @@ class TestSimpleTopBottom:
             ),
         )
         counts = extract_edge_counts(ir, spec)
-        assert counts["top"] == 80   # CAST_ON edge → starting_stitch_count
+        assert counts["top"] == 80  # CAST_ON edge → starting_stitch_count
         assert counts["bottom"] == 80  # LIVE_STITCH (output) → ending_stitch_count
 
     def test_bound_off_bottom(self):

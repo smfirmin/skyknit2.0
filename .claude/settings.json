@@ -41,7 +41,9 @@
       "Bash(pip3.14 install ruff)",
       "Bash(pip3.14 install ruff -i https://pypi.org/simple/ --break-system-packages)",
       "Bash(python3.14 -m ruff check --fix .)",
-      "Bash(git add -A)"
+      "Bash(git add -A)",
+      "Bash(python3.14 -m ruff format --check .)",
+      "Bash(python3.14 -m ruff format .)"
     ]
   }
 }

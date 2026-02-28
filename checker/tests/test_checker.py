@@ -218,12 +218,14 @@ class TestCheckAllJoinErrors:
         # 2-stitch diff at 20 sts/inch ≈ 2.54mm > 1.0mm → should fail
         manifest = ShapeManifest(
             components=(_yoke_spec(80), _body_spec(80)),
-            joins=(Join(
-                id="yoke_body_join",
-                join_type=JoinType.CONTINUATION,
-                edge_a_ref="yoke.bottom",
-                edge_b_ref="body.top",
-            ),),
+            joins=(
+                Join(
+                    id="yoke_body_join",
+                    join_type=JoinType.CONTINUATION,
+                    edge_a_ref="yoke.bottom",
+                    edge_b_ref="body.top",
+                ),
+            ),
         )
         yoke_ir = ComponentIR(
             component_name="yoke",

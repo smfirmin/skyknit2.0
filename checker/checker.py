@@ -125,8 +125,16 @@ def _join_tolerance(
 ) -> float:
     name_a = _component_name_from_ref(edge_a_ref)
     name_b = _component_name_from_ref(edge_b_ref)
-    tol_a = constraints[name_a].physical_tolerance_mm if name_a in constraints else _DEFAULT_TOLERANCE_MM
-    tol_b = constraints[name_b].physical_tolerance_mm if name_b in constraints else _DEFAULT_TOLERANCE_MM
+    tol_a = (
+        constraints[name_a].physical_tolerance_mm
+        if name_a in constraints
+        else _DEFAULT_TOLERANCE_MM
+    )
+    tol_b = (
+        constraints[name_b].physical_tolerance_mm
+        if name_b in constraints
+        else _DEFAULT_TOLERANCE_MM
+    )
     return min(tol_a, tol_b)
 
 

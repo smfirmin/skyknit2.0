@@ -186,6 +186,7 @@ class TestMirrorComponentIR:
 
     def test_shaping_notes_mirrored(self):
         from schemas.ir import Operation
+
         op_with_ssk = Operation(
             op_type=OpType.TAPER,
             parameters={},

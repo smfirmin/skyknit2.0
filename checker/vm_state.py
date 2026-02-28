@@ -32,6 +32,4 @@ class VMState:
 
     def __post_init__(self) -> None:
         if self.live_stitch_count < 0:
-            raise ValueError(
-                f"live_stitch_count must be >= 0, got {self.live_stitch_count}"
-            )
+            raise ValueError(f"live_stitch_count must be >= 0, got {self.live_stitch_count}")

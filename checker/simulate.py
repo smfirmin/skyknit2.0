@@ -63,10 +63,10 @@ def simulate_component(ir: ComponentIR) -> SimulationResult:
     """
     # Receiving components begin with live stitches already on the needle.
     # CAST_ON components start from zero and explicitly establish their count.
-    first_op_is_cast_on = (
-        len(ir.operations) > 0 and ir.operations[0].op_type == OpType.CAST_ON
+    first_op_is_cast_on = len(ir.operations) > 0 and ir.operations[0].op_type == OpType.CAST_ON
+    state = (
+        VMState() if first_op_is_cast_on else VMState(live_stitch_count=ir.starting_stitch_count)
     )
-    state = VMState() if first_op_is_cast_on else VMState(live_stitch_count=ir.starting_stitch_count)
     errors: list[CheckerError] = []
 
     for idx, op in enumerate(ir.operations):
@@ -138,9 +138,7 @@ def extract_edge_counts(ir: ComponentIR, component_spec: ComponentSpec) -> dict[
     result = simulate_component(ir)
     held = result.final_state.held_stitches
 
-    first_op_is_cast_on = (
-        len(ir.operations) > 0 and ir.operations[0].op_type == OpType.CAST_ON
-    )
+    first_op_is_cast_on = len(ir.operations) > 0 and ir.operations[0].op_type == OpType.CAST_ON
 
     edge_counts: dict[str, int] = {}
     for edge in component_spec.edges:

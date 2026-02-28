@@ -40,46 +40,54 @@ def validate_spatial_coherence(manifest: ShapeManifest) -> list[ValidationError]
     for component in manifest.components:
         for edge in component.edges:
             if edge.join_ref is not None and edge.join_ref not in join_ids:
-                errors.append(ValidationError(
-                    join_id=edge.join_ref,
-                    message=(
-                        f"edge '{component.name}.{edge.name}' references join "
-                        f"{edge.join_ref!r} which does not exist in the manifest"
-                    ),
-                    severity="error",
-                ))
+                errors.append(
+                    ValidationError(
+                        join_id=edge.join_ref,
+                        message=(
+                            f"edge '{component.name}.{edge.name}' references join "
+                            f"{edge.join_ref!r} which does not exist in the manifest"
+                        ),
+                        severity="error",
+                    )
+                )
 
     # ── 2. Every join's edge refs must resolve ────────────────────────────────
     for join in manifest.joins:
         if join.edge_a_ref not in edge_map:
-            errors.append(ValidationError(
-                join_id=join.id,
-                message=(
-                    f"join '{join.id}': edge_a_ref {join.edge_a_ref!r} "
-                    f"does not resolve to any component edge"
-                ),
-                severity="error",
-            ))
+            errors.append(
+                ValidationError(
+                    join_id=join.id,
+                    message=(
+                        f"join '{join.id}': edge_a_ref {join.edge_a_ref!r} "
+                        f"does not resolve to any component edge"
+                    ),
+                    severity="error",
+                )
+            )
         if join.edge_b_ref not in edge_map:
-            errors.append(ValidationError(
-                join_id=join.id,
-                message=(
-                    f"join '{join.id}': edge_b_ref {join.edge_b_ref!r} "
-                    f"does not resolve to any component edge"
-                ),
-                severity="error",
-            ))
+            errors.append(
+                ValidationError(
+                    join_id=join.id,
+                    message=(
+                        f"join '{join.id}': edge_b_ref {join.edge_b_ref!r} "
+                        f"does not resolve to any component edge"
+                    ),
+                    severity="error",
+                )
+            )
 
         # ── 3. A join must not connect an edge to itself ───────────────────────
         if join.edge_a_ref == join.edge_b_ref:
-            errors.append(ValidationError(
-                join_id=join.id,
-                message=(
-                    f"join '{join.id}': edge_a_ref and edge_b_ref are the same "
-                    f"({join.edge_a_ref!r}) — a join must connect two distinct edges"
-                ),
-                severity="error",
-            ))
+            errors.append(
+                ValidationError(
+                    join_id=join.id,
+                    message=(
+                        f"join '{join.id}': edge_a_ref and edge_b_ref are the same "
+                        f"({join.edge_a_ref!r}) — a join must connect two distinct edges"
+                    ),
+                    severity="error",
+                )
+            )
 
     return errors
 

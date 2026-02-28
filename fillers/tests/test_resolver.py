@@ -17,7 +17,9 @@ MOTIF_4 = StitchMotif(name="2x2 rib", stitch_repeat=4, row_repeat=1)
 YARN = YarnSpec(weight="DK", fiber="wool", needle_size_mm=4.0)
 
 
-def _constraint(stitch_repeat: int = 1, tolerance_mm: float = 10.0, hard: tuple[int, ...] = ()) -> ConstraintObject:
+def _constraint(
+    stitch_repeat: int = 1, tolerance_mm: float = 10.0, hard: tuple[int, ...] = ()
+) -> ConstraintObject:
     motif = StitchMotif(name="test", stitch_repeat=stitch_repeat, row_repeat=1)
     return ConstraintObject(
         gauge=GAUGE,
@@ -89,7 +91,7 @@ class TestTrapezoidResolution:
             name="sleeve",
             shape_type=ShapeType.TRAPEZOID,
             dimensions={
-                "top_circumference_mm": 508.0,   # → 400 sts
+                "top_circumference_mm": 508.0,  # → 400 sts
                 "bottom_circumference_mm": 254.0,  # → 200 sts
                 "depth_mm": 457.2,
             },
