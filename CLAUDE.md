@@ -13,11 +13,14 @@ Skyknit 2.0 is an AI-powered knitting pattern generator for top-down sweater con
 uv sync --extra dev
 
 # Tests
-uv run pytest                          # run all tests (277 tests across 3 packages)
-uv run pytest -v                       # verbose
-uv run pytest topology/tests/ -v       # topology package only
-uv run pytest utilities/tests/ -v      # utilities package only
-uv run pytest schemas/tests/ -v        # schemas package only
+python3.14 -m pytest                          # run all tests (495 tests across 7 packages)
+python3.14 -m pytest -v                       # verbose
+python3.14 -m pytest topology/tests/ -v       # topology package only
+python3.14 -m pytest utilities/tests/ -v      # utilities package only
+python3.14 -m pytest schemas/tests/ -v        # schemas package only
+python3.14 -m pytest checker/tests/ -v        # checker package only
+python3.14 -m pytest validator/tests/ -v      # validator package only
+python3.14 -m pytest fillers/tests/ -v        # fillers package only
 
 # Lint & format
 uv run ruff check .                    # lint
@@ -42,7 +45,7 @@ GitHub Actions runs three parallel jobs on every push and PR to main: **lint** (
 
 ## Architecture
 
-Three implemented packages, each with its own `tests/` subdirectory:
+Seven implemented packages, each with its own `tests/` subdirectory:
 
 - **topology/** — Core package: edge/join type registry backed by YAML lookup tables
   - `types.py` — Enums (`EdgeType`, `JoinType`, `CompatibilityResult`, `ArithmeticImplication`, `RenderingMode`) and frozen dataclasses (`EdgeTypeEntry`, `JoinTypeEntry`, `CompatibilityEntry`, `ArithmeticEntry`, `WriterDispatchEntry`); also runtime objects `Edge` and `Join`
@@ -64,6 +67,27 @@ Three implemented packages, each with its own `tests/` subdirectory:
   - `constraint.py` — `StitchMotif`, `YarnSpec`, `ConstraintObject` (one per component from Fabric Module)
   - `ir.py` — `OpType` enum, `Operation`, `ComponentIR`; factory helpers `make_cast_on`, `make_work_even`, `make_bind_off`
   - `tests/` — 54 tests across 5 test files
+
+- **checker/** — Algebraic Checker: validates ComponentIR against stitch arithmetic constraints
+  - `vm_state.py` — `VMState` mutable dataclass (intentional exception to frozen convention; simulation cursor)
+  - `operations.py` — `execute_op`: match/case dispatch over `OpType`; mutates `VMState`
+  - `simulate.py` — `CheckerError`, `SimulationResult`, `simulate_component`, `extract_edge_counts`
+  - `joins.py` — `validate_join`, `validate_all_joins`: ArithmeticImplication dispatch + gauge-based mm tolerance
+  - `checker.py` — `CheckerResult`, `check_all`: end-to-end check over all components and joins
+  - `tests/` — tests across 5 test files
+
+- **validator/** — Phase 1 Geometric Validator: structural validation of ShapeManifest
+  - `compatibility.py` — `ValidationError`, `validate_edge_join_compatibility`: topology registry lookup
+  - `spatial.py` — `validate_spatial_coherence`: dangling refs, bad edge refs, self-joins
+  - `phase1.py` — `ValidationResult`, `validate_phase1`: pipeline combining both checks; warnings-only → passed
+  - `tests/` — tests across 3 test files
+
+- **fillers/** — Stitch Fillers: resolve physical dimensions to stitch counts and build ComponentIR
+  - `resolver.py` — `resolve_stitch_counts`: maps edge position + ShapeType to dimension key
+  - `join_params.py` — `read_join_parameters`: extracts JoinType-specific parameters as mutable copy
+  - `ir_builder.py` — `build_component_ir`, `mirror_component_ir`: IR construction + LEFT↔RIGHT mirroring
+  - `filler.py` — `FillerInput`, `FillerOutput`, `StitchFiller` protocol, `DeterministicFiller`
+  - `tests/` — tests across 4 test files
 
 See `ARCHITECTURE.md` for full system design, pipeline, and module build order.
 
@@ -91,10 +115,13 @@ See `ARCHITECTURE.md` for full system design, pipeline, and module build order.
 ## Package Dependency Graph
 
 ```
-schemas  ──depends on──▶  topology (for Edge, Join types)
-schemas  ──depends on──▶  utilities (for Gauge type)
-utilities  ──no upstream deps──▶  (pure computation)
+schemas   ──depends on──▶  topology (for Edge, Join types)
+schemas   ──depends on──▶  utilities (for Gauge type)
+utilities ──no upstream deps──▶  (pure computation)
 topology  ──no upstream deps──▶  (pure domain, depends only on PyYAML)
+checker   ──depends on──▶  schemas, utilities, topology
+validator ──depends on──▶  schemas, topology
+fillers   ──depends on──▶  schemas, utilities, topology, checker
 ```
 
 ## Adding New Data (Topology Tables)

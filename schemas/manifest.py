@@ -58,9 +58,7 @@ class ComponentSpec:
         if isinstance(self.dimensions, dict):
             object.__setattr__(self, "dimensions", MappingProxyType(self.dimensions))
         if self.instantiation_count < 1:
-            raise ValueError(
-                f"instantiation_count must be >= 1, got {self.instantiation_count}"
-            )
+            raise ValueError(f"instantiation_count must be >= 1, got {self.instantiation_count}")
 
 
 @dataclass(frozen=True)

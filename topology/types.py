@@ -135,9 +135,7 @@ class Join:
     join_type: JoinType
     edge_a_ref: str  # "component_name.edge_name"
     edge_b_ref: str  # "component_name.edge_name"
-    parameters: MappingProxyType[str, Any] = field(
-        default_factory=lambda: MappingProxyType({})
-    )
+    parameters: MappingProxyType[str, Any] = field(default_factory=lambda: MappingProxyType({}))
 
     def __post_init__(self) -> None:
         # Accept plain dicts at construction sites and silently promote to MappingProxyType.

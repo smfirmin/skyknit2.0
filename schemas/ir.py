@@ -86,9 +86,7 @@ class ComponentIR:
                 f"starting_stitch_count must be >= 0, got {self.starting_stitch_count}"
             )
         if self.ending_stitch_count < 0:
-            raise ValueError(
-                f"ending_stitch_count must be >= 0, got {self.ending_stitch_count}"
-            )
+            raise ValueError(f"ending_stitch_count must be >= 0, got {self.ending_stitch_count}")
 
 
 # Convenience factory functions for the most common single-op components.
