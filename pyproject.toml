@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["topology*", "utilities*", "schemas*", "checker*", "validator*", "fillers*"]
+include = ["skyknit*"]
 
 [project]
 name = "skyknit"
@@ -22,7 +22,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["topology/tests", "utilities/tests", "schemas/tests", "checker/tests", "validator/tests", "fillers/tests"]
+testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
@@ -33,7 +33,7 @@ select = ["E", "W", "F", "I"]
 ignore = ["E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["topology", "utilities", "schemas", "checker", "validator", "fillers"]
+known-first-party = ["skyknit"]
 
 [tool.mypy]
 python_version = "3.14"
@@ -41,25 +41,5 @@ strict = true
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = "topology.tests.*"
-disallow_untyped_defs = false
-
-[[tool.mypy.overrides]]
-module = "utilities.tests.*"
-disallow_untyped_defs = false
-
-[[tool.mypy.overrides]]
-module = "schemas.tests.*"
-disallow_untyped_defs = false
-
-[[tool.mypy.overrides]]
-module = "checker.tests.*"
-disallow_untyped_defs = false
-
-[[tool.mypy.overrides]]
-module = "validator.tests.*"
-disallow_untyped_defs = false
-
-[[tool.mypy.overrides]]
-module = "fillers.tests.*"
+module = "tests.*"
 disallow_untyped_defs = false
