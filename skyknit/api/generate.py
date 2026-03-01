@@ -17,7 +17,7 @@ from skyknit.orchestrator.pipeline import DeterministicOrchestrator, Orchestrato
 from skyknit.schemas.constraint import StitchMotif, YarnSpec
 from skyknit.schemas.proportion import PrecisionPreference
 from skyknit.utilities.types import Gauge
-from skyknit.writer.writer import TemplateWriter, WriterInput
+from skyknit.writer.writer import PatternWriter, TemplateWriter, WriterInput
 
 
 def generate_pattern(
@@ -28,6 +28,7 @@ def generate_pattern(
     yarn_spec: YarnSpec,
     ease_level: EaseLevel = EaseLevel.STANDARD,
     precision: PrecisionPreference = PrecisionPreference.MEDIUM,
+    writer: PatternWriter | None = None,
 ) -> str:
     """
     Generate a complete knitting pattern from body measurements and yarn specification.
@@ -50,6 +51,9 @@ def generate_pattern(
         Desired ease level; defaults to STANDARD.
     precision:
         Tolerance precision; defaults to MEDIUM.
+    writer:
+        Custom pattern writer; defaults to ``TemplateWriter()`` when ``None``.
+        Pass ``LLMWriter(...)`` for richer, LLM-enhanced prose.
 
     Returns
     -------
@@ -92,7 +96,8 @@ def generate_pattern(
         )
     )
 
-    writer_out = TemplateWriter().write(
+    _writer = writer if writer is not None else TemplateWriter()
+    writer_out = _writer.write(
         WriterInput(
             manifest=orch_out.manifest,
             irs=orch_out.irs,

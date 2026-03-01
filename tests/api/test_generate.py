@@ -9,6 +9,7 @@ from skyknit.design.module import EaseLevel
 from skyknit.schemas.constraint import StitchMotif, YarnSpec
 from skyknit.schemas.proportion import PrecisionPreference
 from skyknit.utilities.types import Gauge
+from skyknit.writer.writer import WriterInput, WriterOutput
 
 # ── Shared fixtures ────────────────────────────────────────────────────────────
 
@@ -131,3 +132,40 @@ class TestEaseLevel:
         )
         # Patterns differ because stitch counts change with ease
         assert fitted != relaxed
+
+
+# ── Writer injection ───────────────────────────────────────────────────────────
+
+
+class _MarkerWriter:
+    """Deterministic stub that returns a fixed sentinel string."""
+
+    def write(self, wi: WriterInput) -> WriterOutput:
+        return WriterOutput(
+            sections={name: "MARKER" for name in wi.component_order},
+            full_pattern="MARKER",
+        )
+
+
+class TestWriterInjection:
+    def test_custom_writer_is_called(self):
+        result = generate_pattern(
+            "top-down-drop-shoulder-pullover",
+            _MEASUREMENTS_DROP,
+            _GAUGE,
+            _MOTIF,
+            _YARN,
+            writer=_MarkerWriter(),
+        )
+        assert result == "MARKER"
+
+    def test_none_writer_uses_template_writer(self):
+        result = generate_pattern(
+            "top-down-drop-shoulder-pullover",
+            _MEASUREMENTS_DROP,
+            _GAUGE,
+            _MOTIF,
+            _YARN,
+            writer=None,
+        )
+        assert "Cast on" in result

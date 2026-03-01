@@ -21,9 +21,9 @@ Scope is top-down sweater construction for hand knitting (v1); machine knitting 
 | Planner | Deterministic | ✅ Complete |
 | Fabric Module | Deterministic | ✅ Complete |
 | Orchestrator | Deterministic | ✅ Complete |
-| Writer (`TemplateWriter`) | Deterministic stub | ✅ Complete (LLM variant: future) |
+| Writer (`TemplateWriter` + `LLMWriter`) | Deterministic + LLM | 🔄 Phase 11 — active |
 | Design Module (`DeterministicDesignModule`) | Deterministic stub | ✅ Complete (LLM variant: future) |
-| **Parser** (`LLMPatternParser`) | **LLM** | 🔄 **Phase 10 — active** |
+| Parser (`LLMPatternParser`) | LLM | ✅ Complete |
 | Geometric Validator Phase 2 (mesh/viz) | Deterministic | ⏳ Deferred |
 
 ---
@@ -127,12 +127,17 @@ widened tolerance.
 - Single retry for filler-origin checker failures (widens tolerance × 1.5)
 - Raises `PipelineError(stage, detail)` on unrecoverable failure
 
-### Writer
-- **Type:** LLM (v1: deterministic `TemplateWriter`)
+### Writer *(Phase 11 — active)*
+- **Type:** LLM (`LLMWriter`) + deterministic fallback (`TemplateWriter`)
 - **In:** WriterInput (ShapeManifest + IRs + component order)
 - **Out:** WriterOutput (per-component sections + full_pattern string)
-- **v1 status:** Template-based prose from `writer/templates.py`; uses writer_dispatch.yaml
+- **`TemplateWriter`:** Template-based prose from `writer/templates.py`; uses writer_dispatch.yaml
   for join rendering mode (INLINE / INSTRUCTION / HEADER_NOTE)
+- **`LLMWriter`:** Two-pass design — TemplateWriter provides ground-truth prose (correct numbers),
+  Claude rewrites into richer, more idiomatic language via `write_knitting_pattern` tool.
+  Optional context (gauge, stitch_motif, yarn_spec) enables physical-measurement conversions.
+  Gracefully falls back to TemplateWriter output on any LLM failure.
+- Both satisfy the `PatternWriter` Protocol; inject via `generate_pattern(writer=...)`
 - Handedness drives left/right language in join instructions
 - Suppresses redundant CAST_ON when a PICKUP join instruction already emitted
 
@@ -306,8 +311,8 @@ skyknit.api          ──depends on──▶  skyknit.design, skyknit.fabric, 
 | 7 | Planner | ✅ |
 | 8 | Fabric Module + Orchestrator | ✅ |
 | 9 | Writer (template) + Design Module (stub) + API | ✅ |
-| **10** | **Parser (LLM) + Validator API** | 🔄 **active** |
-| 11 | Writer (LLM variant — richer prose) | ⏳ next |
+| 10 | Parser (LLM) + Validator API | ✅ |
+| **11** | **Writer (LLM variant — richer prose)** | 🔄 **active** |
 | 12 | Design Module (LLM variant — natural language intent) | ⏳ planned |
 | 13 | Geometric Validator Phase 2 (mesh + visualization) | ⏳ deferred |
 
@@ -319,7 +324,7 @@ skyknit.api          ──depends on──▶  skyknit.design, skyknit.fabric, 
 |---|---|---|
 | A | Hand-knit pipeline (build order 1–9) | ✅ Complete |
 | B | Made-to-measure as default interface | ✅ Substantially complete (`generate_pattern()`) |
-| C | Pattern validation tool (LLM Parser) | 🔄 Phase 10 |
+| C | Pattern validation tool (LLM Parser) | ✅ Complete |
 | D | FabricMode + machine knitting output (DAK format) | ⏳ Planned |
 | E | Yarn database + regional sourcing | ⏳ Planned |
 | F | Industrial machine formats (Stoll, Shima Seiki) | ⏳ Future |

@@ -50,3 +50,7 @@ disallow_untyped_defs = false
 [[tool.mypy.overrides]]
 module = "skyknit.parser.*"
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "skyknit.writer.*"
+ignore_missing_imports = true
