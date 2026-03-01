@@ -20,6 +20,9 @@ dev = [
     "mypy>=1.0",
     "types-PyYAML>=6.0",
 ]
+llm = [
+    "anthropic>=0.40",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -43,3 +46,7 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "tests.*"
 disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = "skyknit.parser.*"
+ignore_missing_imports = true

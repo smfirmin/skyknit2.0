@@ -52,8 +52,11 @@ def simulate_component(ir: ComponentIR) -> SimulationResult:
     Replay all operations in *ir* through the VM and validate stitch counts.
 
     Validation checks (in order):
-    1. ``starting_stitch_count`` on the IR must match the stitch count
-       established by the first operation (i.e. the CAST_ON count).
+    1. For CAST_ON components: ``starting_stitch_count`` must match the count
+       established by the CAST_ON operation.
+       For PICKUP_STITCHES / CONTINUATION components: the VM is pre-loaded
+       with ``starting_stitch_count`` live stitches (0 for PICKUP_STITCHES,
+       which then adds stitches via the operation itself).
     2. Each operation must execute without raising ValueError.
     3. ``ending_stitch_count`` must match the VM's live count after all ops.
 

@@ -1,176 +1,253 @@
 d# AI Knitting Pattern Generator — Architecture Overview
 
 ## Purpose
-This document provides a high-level architecture reference for implementation. It describes the system's modules, data contracts, lookup tables, and build order. Scope is limited to top-down sweater construction for v1.
+
+This document is the architecture reference for Skyknit 2.0. It describes the system's
+modules, data contracts, lookup tables, build order, and active development direction.
+Scope is top-down sweater construction for hand knitting (v1); machine knitting is Phase D.
+
+---
+
+## Implementation Status
+
+| Module | Type | Status |
+|---|---|---|
+| Topology (lookup tables + registry) | Deterministic | ✅ Complete |
+| Utilities (conversion, repeats, tolerance, shaping) | Deterministic | ✅ Complete |
+| Schemas (IR, manifest, constraint, proportion) | Data contracts | ✅ Complete |
+| Algebraic Checker | Deterministic | ✅ Complete |
+| Geometric Validator Phase 1 | Deterministic | ✅ Complete |
+| Stitch Fillers | Deterministic | ✅ Complete |
+| Planner | Deterministic | ✅ Complete |
+| Fabric Module | Deterministic | ✅ Complete |
+| Orchestrator | Deterministic | ✅ Complete |
+| Writer (`TemplateWriter`) | Deterministic stub | ✅ Complete (LLM variant: future) |
+| Design Module (`DeterministicDesignModule`) | Deterministic stub | ✅ Complete (LLM variant: future) |
+| **Parser** (`LLMPatternParser`) | **LLM** | 🔄 **Phase 10 — active** |
+| Geometric Validator Phase 2 (mesh/viz) | Deterministic | ⏳ Deferred |
 
 ---
 
 ## Core Philosophy
+
 - **Geometry, fabric, and construction are strictly separated.** No module crosses these boundaries.
-- **LLMs handle judgment; deterministic code handles correctness.** The boundary is explicit and enforced.
-- **All construction domain knowledge lives in lookup tables** — versioned data files that ship with the system. Modules read from them; nothing writes to them at runtime.
-- **Joins are first-class objects**, not properties of components. Every join is edge-to-edge: exactly two typed edges, one from each adjacent component.
-- **Tolerance is expressed in physical units (mm)**, derived from gauge, ease, and precision preference.
+- **LLMs handle judgment; deterministic code handles correctness.** The boundary is explicit
+  and enforced. LLM output feeds into deterministic validation; it cannot bypass it.
+- **All construction domain knowledge lives in lookup tables** — versioned YAML files shipped
+  with the system. Modules read from them; nothing writes to them at runtime.
+- **Joins are first-class objects**, not properties of components. Every join is edge-to-edge.
+- **Tolerance is expressed in physical units (mm)**, derived from gauge, ease, and precision
+  preference.
+- **The IR is the lingua franca.** Parser (text → IR) and Writer (IR → text) are symmetric.
+  The same IR that the pipeline generates can be parsed back from any conforming pattern text.
 
 ---
 
 ## Pipeline
 
+### Generation (forward direction)
+
 ```
-Phase 1 — Geometry
-  Design Module → Planner → Shape Manifest (typed edges) + Join Objects
-
-Phase 2 — Fabric (concurrent with Phase 1 after component list is emitted)
-  Fabric Module → Constraint Objects (one per component)
-
-Phase 3 — Construction & Validation
-  Parallel Stitch Fillers → Algebraic Checker → Geometric Validator → Writer
+Design Module ──▶ Planner ──▶ Stitch Fillers ──▶ Algebraic Checker ──▶ Writer
+  proportion      manifest        ComponentIR       validation           prose text
+  spec            + joins
 ```
 
-An **Orchestrator** manages the dependency graph, triggers modules when their inputs are ready, and routes failures back to the appropriate upstream module.
+### Validation (reverse direction — Phase 10)
+
+```
+Pattern Text ──[LLM Parser]──▶ ShapeManifest + ComponentIR dict ──[Algebraic Checker]──▶ ValidationReport
+```
+
+### Bidirectional loop
+
+```
+generate_pattern() ──▶ pattern prose ──[LLM Parser]──▶ IR + Manifest ──[check_all()]──▶ pass
+```
+
+This round-trip loop is the key integration test for Phase 10: a generated pattern,
+re-parsed and re-validated, must pass the Algebraic Checker.
+
+### Orchestration
+
+An **Orchestrator** manages the generation DAG, triggers modules when inputs are ready,
+and routes algebraic failures back to the relevant Stitch Filler for a single retry with
+widened tolerance.
 
 ---
 
 ## Modules
 
 ### Design Module
-- **Type:** LLM
-- **In:** User intent, style preferences, target ease
-- **Out:** Proportion spec (dimensionless ratios, no measurements or stitch counts), precision preference (high / medium / low)
+- **Type:** LLM (v1: deterministic stub `DeterministicDesignModule`)
+- **In:** User intent, style preferences, ease level
+- **Out:** Proportion spec (dimensionless ratios), precision preference
+- **v1 status:** `EaseLevel` enum (FITTED/STANDARD/RELAXED) → hardcoded ease ratios
 
 ### Planner
-- **Type:** LLM + deterministic tools
-- **In:** Proportion spec, user body measurements
-- **Out (stage 1):** Component list — emitted first to unblock Fabric Module
-- **Out (stage 2):** Shape manifest — geometric shapes with typed edges and populated Join objects
+- **Type:** Deterministic
+- **In:** Proportion spec, user body measurements (mm), GarmentSpec
+- **Out:** ShapeManifest (component list + typed edges + Join objects)
 - Reads: Edge Type Registry, Join Type Registry, Compatibility Table, Defaults Table
-- Works entirely in physical units (mm / inches). No stitch awareness.
+- Works entirely in physical units (mm). No stitch awareness.
 
 ### Fabric Module
-- **Type:** LLM + deterministic tools
-- **In:** Component list, user yarn/gauge information, precision preference
-- **Out:** One Constraint Object per component
-- Runs concurrently with Planner stage 2 once component list is available
-- Produces physical tolerance value per component using the Tolerance Calculator utility
+- **Type:** Deterministic
+- **In:** Component list, gauge, stitch motif, yarn spec, precision preference
+- **Out:** One ConstraintObject per component (gauge + tolerance + motif + yarn)
+- Applies uniform gauge across all components in v1
 
-### Stitch Fillers (parallel, one per component)
-- **Type:** LLM + deterministic tools
-- **In:** Shape spec with typed edges and Join objects, Constraint Object, handedness annotation
-- **Out:** Component IR (typed operation sequence)
-- Integration point — the only module that reasons about both geometry and fabric simultaneously
-- Reads Join objects as read-only; treats join-owned parameters as given
-- Converts physical dimensions to stitch counts using shared Unit Conversion utility
+### Stitch Fillers
+- **Type:** Deterministic
+- **In:** ComponentSpec (with typed edges + joins), ConstraintObject, handedness
+- **Out:** ComponentIR (typed operation sequence)
+- Converts physical dimensions → stitch counts using shared utilities
 - Selects nearest valid stitch count within physical tolerance band
-- Symmetric components (sleeves) instantiated as left/right variants with mirrored shaping and handedness annotations
-- Has full discretion over construction strategy within constraints
+- Mirrors shaping operations for LEFT/RIGHT handedness
 
 ### Algebraic Checker
 - **Type:** Deterministic
-- **In:** All component IR, shape manifest, Join objects, Constraint Objects
-- **Out:** Pass, or failure with specific component and error type
-- Operates as a virtual machine: simulates IR execution, tracks live stitch count, held stitches, needle state
-- Reads: Arithmetic Implications Table for boundary transition behaviour
-- Validates intra-component: stitch count progression, pattern repeat divisibility, correct arrival at each edge within tolerance
-- Validates inter-component: stitch counts delivered to each join agree within tolerance; join-owned parameters correctly accounted for by both adjacent fillers
-- Flags failures as filler-origin or geometric-origin to route correctly
+- **In:** All ComponentIRs + ShapeManifest + ConstraintObjects
+- **Out:** CheckerResult (passed bool + tuple of CheckerError)
+- Simulates IR execution as a virtual machine; tracks live stitch count
+- Validates intra-component stitch count progression
+- Validates inter-component join arithmetic (stitch counts match across joins)
+- Flags failures as `filler_origin` (bad arithmetic) or `geometric_origin` (measurement mismatch)
 
-### Geometric Validator
+### Geometric Validator Phase 1
 - **Type:** Deterministic
-- Runs twice:
-  - **Phase 1** (after Planner): validates edge-join spatial coherence from shape manifest alone; produces 3D mesh preview
-  - **Phase 3** (after Algebraic Checker passes): final assembly check catching geometry errors that only emerge from stitch count resolution
-- Reads: Compatibility Table during Phase 1
-- Failures route to Planner to revise shape manifest
+- **In:** ShapeManifest
+- **Out:** ValidationResult (warnings/errors on structural problems)
+- Checks edge-join compatibility (Compatibility Table)
+- Checks spatial coherence (dangling refs, self-joins, bad edge refs)
 
 ### Orchestrator
 - **Type:** Deterministic
-- Manages the pipeline DAG: tracks which module outputs are available, triggers downstream modules when dependencies are satisfied
-- Handles retry routing: algebraic failures → relevant Stitch Filler; geometric failures → Planner; tolerance escalation → defined escalation sequence
-- Named component; retry logic lives here, not scattered across modules
+- Manages the generation DAG: Planner → validate_phase1 → FabricModule → Fillers → check_all
+- Single retry for filler-origin checker failures (widens tolerance × 1.5)
+- Raises `PipelineError(stage, detail)` on unrecoverable failure
 
 ### Writer
-- **Type:** LLM
-- **In:** Assembled validated IR with join context and handedness annotations
-- **Out:** Natural language pattern text
-- Reads: Writer Dispatch Table for join rendering behaviour (inline, instruction block, or header note)
-- Uses controlled stitch vocabulary consistent across all component outputs
-- Handedness annotations drive mirrored language for symmetric component instances (SSK vs K2tog, left vs right pickup)
-- Swappable variants: beginner-verbose, standard prose, chart notation
+- **Type:** LLM (v1: deterministic `TemplateWriter`)
+- **In:** WriterInput (ShapeManifest + IRs + component order)
+- **Out:** WriterOutput (per-component sections + full_pattern string)
+- **v1 status:** Template-based prose from `writer/templates.py`; uses writer_dispatch.yaml
+  for join rendering mode (INLINE / INSTRUCTION / HEADER_NOTE)
+- Handedness drives left/right language in join instructions
+- Suppresses redundant CAST_ON when a PICKUP join instruction already emitted
+
+### Parser *(Phase 10 — active)*
+- **Type:** LLM (`LLMPatternParser`)
+- **In:** ParserInput (pattern text + gauge + motif + yarn + precision)
+- **Out:** ParserOutput (ParsedPattern + ShapeManifest + IRs + ConstraintObjects)
+- Uses Claude tool-use API with `extract_knitting_pattern` tool (structured output)
+- Deterministic assembler converts JSON → schema types; no free-text parsing
+- Feeds directly into `check_all()` for validation
+- `PatternParser` Protocol allows deterministic test injection (no real API calls in CI)
+
+---
+
+## Public API
+
+```python
+# Generation
+from skyknit.api.generate import generate_pattern
+
+pattern_text = generate_pattern(
+    garment_type="top-down-drop-shoulder-pullover",
+    measurements={...},   # all in mm
+    gauge=Gauge(20.0, 28.0),
+    stitch_motif=StitchMotif("stockinette", 1, 1),
+    yarn_spec=YarnSpec("DK", "wool", 4.0),
+)
+
+# Validation (Phase 10)
+from skyknit.api.validate import validate_pattern
+
+report = validate_pattern(pattern_text, gauge, stitch_motif, yarn_spec)
+# report.passed: bool
+# report.checker_result: CheckerResult | None
+# report.parse_error: str | None
+```
 
 ---
 
 ## Edge and Join Model
 
 ### Edges
-Each component shape has a named set of typed edges — physical boundaries of the 3D primitive. An edge has a type, physical description (circumference, angle, orientation), and a join slot (empty for terminal edges like cuffs/hems, or populated with a Join object reference).
 
-**Initial edge types:**
-- `CAST_ON` — starting edge where stitches are created
-- `LIVE_STITCH` — stitches on needle, to be transferred or held
-- `BOUND_OFF` — finished edge, no live stitches
-- `PICKUP` — selvedge or row-end edge for stitch pickup
-- `OPEN` — terminal edge, no join (cuff, hem, neckline)
+Each component has a named set of typed edges — physical boundaries of the 3D primitive.
+
+| Edge Type | has_live_stitches | is_terminal | phase_constraint |
+|---|---|---|---|
+| `CAST_ON` | false | false | start |
+| `LIVE_STITCH` | true | false | any |
+| `BOUND_OFF` | false | false | end |
+| `SELVEDGE` | false | false | any |
+| `OPEN` | false | true | end |
 
 ### Joins
-A Join object connects exactly two edges (one from each component). Contains: edge references (ordered — directionality matters for table lookup), join type, join-owned parameters, directionality (symmetric / directional), and physical boundary dimensions.
 
-**Initial join types:**
-- `CONTINUATION` — working yarn continues seamlessly; requires LIVE_STITCH on both sides
-- `HELD_STITCH` — live stitches placed on hold, returned to later
-- `CAST_ON_JOIN` — new stitches cast on at boundary; owns cast-on count
-- `PICKUP` — stitches picked up from finished edge; owns pickup ratio
-- `SEAM` — two bound-off edges joined post-construction; symmetric
+A Join object connects exactly two edges (one from each component). Key is ordered
+(edge_a upstream, edge_b downstream) and non-commutative.
 
-**Top-down sweater underarm example (4 pairwise joins):**
-```
-YOKE.left_underarm (LIVE_STITCH)  ↔  SLEEVE_LEFT.cap (LIVE_STITCH)   → HELD_STITCH
-YOKE.right_underarm (LIVE_STITCH) ↔  SLEEVE_RIGHT.cap (LIVE_STITCH)  → HELD_STITCH
-YOKE.body (LIVE_STITCH)           ↔  BODY.top (CAST_ON)              → CAST_ON_JOIN (owns underarm cast-on count)
-YOKE.collar (LIVE_STITCH)         ↔  COLLAR.bottom (CAST_ON)         → CONTINUATION
-BODY.bottom (OPEN)                                                    → terminal
-```
+| Join Type | Arithmetic | Symmetric | Rendering |
+|---|---|---|---|
+| `CONTINUATION` | ONE_TO_ONE | false | inline |
+| `HELD_STITCH` | ONE_TO_ONE | false | instruction block |
+| `CAST_ON_JOIN` | ADDITIVE | false | instruction block |
+| `PICKUP` | RATIO | false | instruction block |
+| `SEAM` | ONE_TO_ONE | true | header note |
+
+**Known v1 limitation:** PICKUP joins from SELVEDGE edges (drop-shoulder armholes) are
+skipped in the Algebraic Checker. Pipeline derives sleeve stitch count from
+`upper_arm_circumference × ease` (measurement-driven), but RATIO validation expects
+`body_rows × pickup_ratio` (topology-driven). These values are not generally equal.
 
 ---
 
 ## Lookup Tables
-Versioned structured data files (JSON or YAML) shipped with the system. Loaded at startup, read at runtime, never written to. Cross-referencing validation runs at startup to catch missing or inconsistent entries.
+
+Versioned YAML files under `skyknit/topology/data/`. Loaded once at startup, read at
+runtime, never written to. Cross-reference validation runs at import time.
 
 | Table | Key | Purpose |
 |---|---|---|
-| Edge Type Registry | edge_type | Master list of edge types with direction and phase constraints |
-| Join Type Registry | join_type | Master list of join types with ownership and symmetry metadata |
-| Compatibility Table | (edge_type_A, edge_type_B, join_type) | VALID / INVALID / CONDITIONAL per combination. Key is ordered. |
-| Defaults Table | (edge_type_A, edge_type_B, join_type) | Default values for join-owned parameters |
-| Arithmetic Implications Table | join_type | How join affects stitch count: ADDITIVE / ONE_TO_ONE / RATIO / STRUCTURAL |
-| Writer Dispatch Table | join_type | Writer template key, rendering mode, directionality note |
-
-**Compatibility Table entries:**
-- `VALID` — unconditionally valid
-- `INVALID` — never valid
-- `CONDITIONAL` — valid when a named constraint function (in code) returns true; function name stored in table entry
+| `edge_types.yaml` | edge_type | Master list of edge types |
+| `join_types.yaml` | join_type | Master list of join types |
+| `compatibility.yaml` | (edge_type_a, edge_type_b, join_type) | VALID / INVALID / CONDITIONAL |
+| `defaults.yaml` | (edge_type_a, edge_type_b, join_type) | Default join-owned parameters |
+| `arithmetic_implications.yaml` | join_type | ADDITIVE / ONE_TO_ONE / RATIO / STRUCTURAL |
+| `writer_dispatch.yaml` | join_type | template_key, rendering_mode, directionality |
 
 ---
 
 ## Data Contracts
 
 ### Proportion Spec
-Dimensionless ratios from Design Module. No measurements, no stitch counts. Includes precision preference.
+Dimensionless ease ratios from Design Module. No measurements, no stitch counts.
+Keys: `body_ease`, `sleeve_ease`, `wrist_ease`. Includes `PrecisionPreference`.
 
 ### Shape Manifest
-From Planner. Component list (stage 1) then full manifest (stage 2): shape type and variant, physical dimensions, named typed edges with join slot references, instantiation count for symmetric components, handedness annotation, and all Join objects.
+From Planner: component list with shape types, physical dimensions (mm), named typed edges,
+Join objects, handedness, and instantiation counts.
 
 ### Constraint Object (one per component)
-From Fabric Module:
-- `gauge`: stitches/inch, rows/inch
-- `stitch_motif`: name, stitch repeat, row repeat
-- `hard_constraints`: e.g. stitch count must be multiple of N
-- `yarn_spec`: weight, fibre, needle size
-- `physical_tolerance_mm`: derived from gauge base × ease multiplier × precision multiplier
+From Fabric Module: `gauge` (stitches/inch, rows/inch), `stitch_motif`, `hard_constraints`,
+`yarn_spec`, `physical_tolerance_mm`.
 
 ### Component IR
-From Stitch Fillers. Typed operation sequence. Parameterized (repeat intervals, not flattened). Handedness annotated. Construction-agnostic operations marked portable.
+From Stitch Fillers: typed operation sequence (`CAST_ON`, `WORK_EVEN`, `INCREASE_SECTION`,
+`DECREASE_SECTION`, `TAPER`, `BIND_OFF`, `HOLD`, `SEPARATE`, `PICKUP_STITCHES`).
+Parameterized (not flattened row-by-row). Handedness-annotated.
 
-**Example operations:** `CAST_ON`, `INCREASE_SECTION`, `WORK_EVEN`, `SEPARATE`, `TAPER`, `BIND_OFF`
+### ParsedPattern *(Phase 10)*
+Intermediate type from LLM Parser before type conversion. All Python primitives (str, int,
+float, dict). Boundary object between the LLM and the deterministic assembler.
+
+### ValidationReport *(Phase 10)*
+From `validate_pattern()`: `passed` bool, `checker_result` (CheckerResult or None),
+`parsed_pattern` (ParsedPattern or None), `parse_error` (str or None).
 
 ---
 
@@ -180,86 +257,103 @@ From Stitch Fillers. Typed operation sequence. Parameterized (repeat intervals, 
 physical_tolerance_mm = gauge_base × ease_multiplier × precision_multiplier
 ```
 
-- **gauge_base**: one stitch-width at component gauge (e.g. 5 sts/inch → ~5mm)
-- **ease_multiplier**: 0.75× (negative ease) → 2.0× (high positive ease)
-- **precision_multiplier**: high=0.75×, medium=1.0×, low=1.5×
+- `gauge_base`: one stitch-width at component gauge
+- `ease_multiplier`: v1 uses neutral 1.0 (ease applied in Planner dimensions)
+- `precision_multiplier`: HIGH=0.75, MEDIUM=1.0, LOW=1.5
 
-**Stitch count selection process:**
+**Stitch count selection:**
 1. Convert physical dimension to raw count at gauge
-2. Find all counts satisfying pattern repeat and hard constraints
-3. Filter to counts within tolerance band
-4. Select closest to raw target; prefer larger on tie
-5. If none found: escalate
-
-**Escalation sequence:**
-1. Widen by one step (+1 stitch-width); proceed with tolerance advisory if resolved
-2. Check if failure is geometric in origin; if so route to Planner
-3. Surface human-readable message in user terms (measurements, motif names — never stitch arithmetic)
+2. Find all counts satisfying pattern repeat and hard constraints within tolerance band
+3. Select closest to raw target; prefer larger on tie
+4. If none: widen tolerance by one step (Orchestrator retry)
 
 ---
 
-## Shared Utilities
-Implemented once, used by both Stitch Fillers and Algebraic Checker. Both must use identical implementations.
+## Package Dependency Graph
 
-- **Unit Conversion**: physical dimensions ↔ stitch/row counts at gauge
-- **Pattern Repeat Arithmetic**: divisibility checks, nearest valid count within tolerance
-- **Tolerance Calculator**: derives physical_tolerance_mm from gauge + ease + precision preference
-- **Shaping Rate Calculator**: given stitch delta and section depth, produces valid decrease/increase intervals
-
----
-
-## Validation Sequence
+All imports use the `skyknit.` prefix.
 
 ```
-1.  Planner emits component list                          → unblocks Fabric Module
-2.  Planner completes shape manifest + Join objects
-3.  Geometric Validator Phase 1 (compatibility + spatial)
-4.  Fabric Module completes constraint objects             (concurrent with 2–3)
-5.  Stitch Fillers run in parallel
-6.  Algebraic Checker — intra-component validation
-7.  Algebraic Checker — inter-component join validation
-8.  Geometric Validator Phase 3 — final assembly check
-9.  Writer renders pattern
+skyknit.topology     ──no upstream deps──▶  (pure domain, depends only on PyYAML)
+skyknit.utilities    ──no upstream deps──▶  (pure computation)
+skyknit.schemas      ──depends on──▶  skyknit.topology, skyknit.utilities
+skyknit.checker      ──depends on──▶  skyknit.schemas, skyknit.utilities, skyknit.topology
+skyknit.validator    ──depends on──▶  skyknit.schemas, skyknit.topology
+skyknit.fillers      ──depends on──▶  skyknit.schemas, skyknit.utilities, skyknit.topology, skyknit.checker
+skyknit.planner      ──depends on──▶  skyknit.schemas, skyknit.topology, skyknit.validator, skyknit.fillers
+skyknit.fabric       ──depends on──▶  skyknit.schemas, skyknit.utilities
+skyknit.orchestrator ──depends on──▶  skyknit.schemas, skyknit.planner, skyknit.fabric, skyknit.fillers, skyknit.checker, skyknit.validator
+skyknit.writer       ──depends on──▶  skyknit.schemas, skyknit.topology
+skyknit.design       ──depends on──▶  skyknit.schemas
+skyknit.parser       ──depends on──▶  skyknit.schemas, skyknit.topology, skyknit.utilities, skyknit.checker, skyknit.fabric
+                     ──optional──▶    anthropic (LLMPatternParser only; deferred import)
+skyknit.api          ──depends on──▶  skyknit.design, skyknit.fabric, skyknit.orchestrator,
+                                      skyknit.planner, skyknit.writer, skyknit.parser
 ```
-
----
-
-## Failure Routing
-
-| Failure type | Routes to |
-|---|---|
-| Algebraic — filler origin | Relevant Stitch Filler |
-| Algebraic — geometric origin | Planner |
-| Geometric (Phase 1 or 3) | Planner |
-| Tolerance escalation step 1 | Continue with advisory |
-| Tolerance escalation step 2 | Planner |
-| Tolerance escalation step 3 | User-facing message |
 
 ---
 
 ## Build Order
 
-1. **Lookup tables** — seeded for top-down sweater construction; startup cross-referencing validation
-2. **Shared utilities** — unit conversion, repeat arithmetic, tolerance calculator, shaping rate calculator
-3. **Schema definitions** — IR operation types, shape manifest + edge/join schema, constraint object schema
-4. **Algebraic Checker** — simulation VM; validate against hand-authored IR corpus from existing published patterns
-5. **Geometric Validator Phase 1** — edge-join compatibility and spatial validation, 3D mesh preview
-6. **Stitch Fillers** — per-component; iterate against Algebraic Checker
-7. **Planner** — shape manifests with typed edges and Join objects
-8. **Fabric Module** — constraint objects with tolerance values
-9. **Orchestrator** — DAG execution and retry routing
-10. **Design Module** — proportion spec generation; full pipeline end-to-end test
-11. **Writer** — IR to pattern prose; human knitter evaluation
-12. **Geometric Validator Phase 2** — stitch-level mesh and interactive visualization
+| Phase | Module | Status |
+|---|---|---|
+| 1 | Lookup tables (topology YAML + registry) | ✅ |
+| 2 | Shared utilities | ✅ |
+| 3 | Schema definitions | ✅ |
+| 4 | Algebraic Checker | ✅ |
+| 5 | Geometric Validator Phase 1 | ✅ |
+| 6 | Stitch Fillers | ✅ |
+| 7 | Planner | ✅ |
+| 8 | Fabric Module + Orchestrator | ✅ |
+| 9 | Writer (template) + Design Module (stub) + API | ✅ |
+| **10** | **Parser (LLM) + Validator API** | 🔄 **active** |
+| 11 | Writer (LLM variant — richer prose) | ⏳ next |
+| 12 | Design Module (LLM variant — natural language intent) | ⏳ planned |
+| 13 | Geometric Validator Phase 2 (mesh + visualization) | ⏳ deferred |
 
 ---
 
-## Key Constraints and Invariants
-- The Planner has no stitch awareness. It works in physical units only.
-- The Fabric Module has no geometry awareness. It works from component types only.
-- Stitch Fillers treat Join object parameters as read-only. They account for join-owned stitches but do not generate them.
-- Stitch Fillers and the Algebraic Checker must use identical shared utility implementations for unit conversion and repeat arithmetic.
-- The Compatibility Table key is ordered: (edge_type_A, edge_type_B) reflects join directionality and is not a commutative pair.
-- Lookup tables are never written to at runtime.
-- All tolerance values are in physical units (mm). Stitch count tolerances are always derived, never set directly.
-- Failure messages surfaced to users must be expressed in user terms (measurements, motif names, garment size). Never expose internal stitch arithmetic in user-facing output.
+## Vision Roadmap
+
+| Phase | Description | Status |
+|---|---|---|
+| A | Hand-knit pipeline (build order 1–9) | ✅ Complete |
+| B | Made-to-measure as default interface | ✅ Substantially complete (`generate_pattern()`) |
+| C | Pattern validation tool (LLM Parser) | 🔄 Phase 10 |
+| D | FabricMode + machine knitting output (DAK format) | ⏳ Planned |
+| E | Yarn database + regional sourcing | ⏳ Planned |
+| F | Industrial machine formats (Stoll, Shima Seiki) | ⏳ Future |
+| G | Body measurement capture (photogrammetry) | ⏳ Future |
+
+---
+
+## Garment Registry
+
+Two garment types registered at startup (self-registering factory pattern):
+
+| Garment type key | Factory | Components |
+|---|---|---|
+| `top-down-drop-shoulder-pullover` | `make_drop_shoulder_pullover()` | body (CYLINDER) + left/right sleeve (TRAPEZOID) |
+| `top-down-yoke-pullover` | `make_v1_yoke_pullover()` | yoke (CYLINDER) + body (CYLINDER) + left/right sleeve (standalone) |
+
+New garments: add a factory function in `skyknit/planner/garments/`, call `register()`,
+import it in `skyknit/planner/garments/__init__.py`.
+
+---
+
+## Key Design Invariants
+
+- **The Planner has no stitch awareness.** It works in physical units only.
+- **The Fabric Module has no geometry awareness.** It works from component types only.
+- **Stitch Fillers treat Join parameters as read-only.** They account for join-owned stitches
+  but do not generate them.
+- **The Algebraic Checker and Stitch Fillers must use identical `utilities` implementations.**
+- **The `CompatibilityKey` triple is ordered.** `(edge_type_a, edge_type_b, join_type)` is
+  non-commutative; edge_type_a is the upstream/source.
+- **Lookup tables are never written to at runtime.**
+- **Tolerance values are always in mm.** Stitch count tolerances are always derived, never set.
+- **Failure messages are in user terms.** Measurements and motif names, never stitch arithmetic.
+- **LLM output feeds deterministic validation; it cannot bypass it.** The Parser produces IR;
+  the Checker validates it. The LLM cannot produce a passing pattern without correct arithmetic.
+- **The IR is the lingua franca.** Any module that produces IR and any module that consumes IR
+  are interchangeable at the Protocol boundary.
