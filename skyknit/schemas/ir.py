@@ -96,7 +96,7 @@ def make_cast_on(count: int, notes: str = "") -> Operation:
     """Create a CAST_ON operation for ``count`` stitches."""
     return Operation(
         op_type=OpType.CAST_ON,
-        parameters={"count": count},
+        parameters=MappingProxyType({"count": count}),
         row_count=None,
         stitch_count_after=count,
         notes=notes,
@@ -107,7 +107,7 @@ def make_work_even(row_count: int, stitch_count: int, notes: str = "") -> Operat
     """Create a WORK_EVEN operation spanning ``row_count`` rows."""
     return Operation(
         op_type=OpType.WORK_EVEN,
-        parameters={},
+        parameters=MappingProxyType({}),
         row_count=row_count,
         stitch_count_after=stitch_count,
         notes=notes,
@@ -118,7 +118,7 @@ def make_bind_off(count: int, notes: str = "") -> Operation:
     """Create a BIND_OFF operation consuming ``count`` stitches."""
     return Operation(
         op_type=OpType.BIND_OFF,
-        parameters={"count": count},
+        parameters=MappingProxyType({"count": count}),
         row_count=None,
         stitch_count_after=0,
         notes=notes,
